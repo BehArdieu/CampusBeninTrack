@@ -19,8 +19,8 @@ export default function HomePage() {
               CampusBeninTrack rassemble une procédure claire depuis la création du dossier sur Études en
               France jusqu’aux démarches d’accueil en France&nbsp;: validation du VLS‑TS en ligne,
               banque française, dossier Caf, inscription à la Sécurité sociale étudiants (numéro, carte Vitale),
-              et rappels fiscaux — y compris la première déclaration à revenus nuls lorsque votre situation le
-              impose.
+              et rappels fiscaux — y compris la première déclaration à revenus nuls lorsque votre situation
+              l’impose.
               <strong className="font-medium text-[var(--forest)]">
                 {" "}
                 Hors catalogue immobilier&nbsp;: aucun détail sur la recherche de logement n’est développé
