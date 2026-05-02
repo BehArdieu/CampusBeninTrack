@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PARCOURS_PHASES, getPhaseById } from "@/lib/parcours";
 import { PhaseChecklist } from "@/components/phase-checklist";
+import { PhaseIllustration } from "@/components/illustrations";
 import type { Metadata } from "next";
 
 export function generateStaticParams() {
@@ -40,18 +41,20 @@ export default async function PhasePage({ params }: Props) {
         <span className="text-[var(--ink-soft)]">{phase.shortTitle}</span>
       </nav>
 
-      <header className="mt-8 max-w-3xl border-l-4 border-[var(--forest)] pl-6">
-        <p className="font-display text-4xl leading-none text-[var(--accent)]">{phase.icon}</p>
-        <h1 className="mt-4 font-display text-3xl font-bold leading-tight text-[var(--ink)] md:text-4xl">
-          {phase.title}
-        </h1>
-        <p className="mt-4 text-lg text-[var(--ink-soft)]">{phase.summary}</p>
-        {phase.officialHint ? (
-          <p className="mt-4 rounded-2xl border border-[var(--border-strong)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--ink-soft)]">
-            <strong>Rappel : </strong>
-            {phase.officialHint}
-          </p>
-        ) : null}
+      <header className="mt-8 flex flex-col gap-6 md:flex-row md:items-start md:gap-10">
+        <PhaseIllustration phaseId={phase.id} className="h-28 w-auto shrink-0 md:h-36" />
+        <div className="max-w-3xl border-l-4 border-[var(--forest)] pl-6">
+          <h1 className="font-display text-3xl font-bold leading-tight text-[var(--ink)] md:text-4xl">
+            {phase.title}
+          </h1>
+          <p className="mt-4 text-lg text-[var(--ink-soft)]">{phase.summary}</p>
+          {phase.officialHint ? (
+            <p className="mt-4 rounded-2xl border border-[var(--border-strong)] bg-[var(--accent-soft)] px-4 py-3 text-sm text-[var(--ink-soft)]">
+              <strong>Rappel : </strong>
+              {phase.officialHint}
+            </p>
+          ) : null}
+        </div>
       </header>
 
       {phase.links?.length ? (

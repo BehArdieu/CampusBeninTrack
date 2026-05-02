@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PARCOURS_PHASES } from "@/lib/parcours";
 import { useTracker } from "@/hooks/use-tracker";
+import { PhaseIllustration } from "@/components/illustrations";
 
 export default function SuiviPage() {
   const { toggle, isChecked, countForIds, hydrated } = useTracker();
@@ -38,14 +39,17 @@ export default function SuiviPage() {
       <div className="mt-12 space-y-12">
         {PARCOURS_PHASES.map((phase) => (
           <section key={phase.id} className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6 md:p-8">
-            <div className="flex flex-wrap items-baseline justify-between gap-4">
-              <div>
-                <h2 className="font-display text-2xl text-[var(--ink)]">{phase.shortTitle}</h2>
-                <p className="mt-2 max-w-xl text-sm text-[var(--muted)]">{phase.summary}</p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+              <div className="flex items-start gap-4">
+                <PhaseIllustration phaseId={phase.id} className="hidden h-16 w-auto shrink-0 sm:block" />
+                <div>
+                  <h2 className="font-display text-2xl text-[var(--ink)]">{phase.shortTitle}</h2>
+                  <p className="mt-2 max-w-xl text-sm text-[var(--muted)]">{phase.summary}</p>
+                </div>
               </div>
               <Link
                 href={`/parcours/${phase.id}`}
-                className="text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
+                className="shrink-0 text-sm font-semibold text-[var(--accent)] underline-offset-4 hover:underline"
               >
                 Ouvrir la fiche détaillée
               </Link>
