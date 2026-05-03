@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthButton } from "./auth-button";
 
 const links = [
   { href: "/", label: "Accueil" },
@@ -18,17 +19,20 @@ export function SiteHeader() {
             Campus France
           </span>
         </Link>
-        <nav className="flex flex-wrap items-center gap-1 text-sm font-medium">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="rounded-full px-3 py-2 text-[var(--ink-soft)] transition hover:bg-[var(--card)] hover:text-[var(--ink)]"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="flex flex-wrap items-center gap-2">
+          <nav className="flex flex-wrap items-center gap-1 text-sm font-medium">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="rounded-full px-3 py-2 text-[var(--ink-soft)] transition hover:bg-[var(--card)] hover:text-[var(--ink)]"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+          <AuthButton />
+        </div>
       </div>
     </header>
   );
