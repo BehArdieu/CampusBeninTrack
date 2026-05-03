@@ -64,7 +64,7 @@ export const PARCOURS_PHASES: ParcoursPhase[] = [
     links: [
       { label: "Campus France Bénin", href: "https://benin.campusfrance.org/" },
       { label: "Campus France (international)", href: "https://www.campusfrance.org/" },
-      { label: "Études en France", href: "https://www.etudes-en-france.gouv.fr/" },
+      { label: "Études en France", href: "https://pastel.diplomatie.gouv.fr/etudesenfrance/dyn/public/authentification/login.html" },
     ],
   },
   {
@@ -120,7 +120,7 @@ export const PARCOURS_PHASES: ParcoursPhase[] = [
       },
     ],
     links: [
-      { label: "Études en France — connexion", href: "https://www.etudes-en-france.gouv.fr/" },
+      { label: "Études en France — connexion", href: "https://pastel.diplomatie.gouv.fr/etudesenfrance/dyn/public/authentification/login.html" },
     ],
   },
   {

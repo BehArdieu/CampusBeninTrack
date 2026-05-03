@@ -23,7 +23,7 @@ export function SiteFooter() {
             campusfrance.org
           </Link>
           <Link
-            href="https://www.etudes-en-france.gouv.fr/"
+            href="https://pastel.diplomatie.gouv.fr/etudesenfrance/dyn/public/authentification/login.html"
             target="_blank"
             rel="noreferrer noopener"
             className="text-[var(--accent)] underline-offset-4 hover:underline"
