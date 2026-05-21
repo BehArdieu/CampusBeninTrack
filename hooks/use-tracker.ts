@@ -70,27 +70,32 @@ export function useTracker() {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (cancelled) return;
-      userRef.current = user;
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (cancelled) return;
+        const user = data?.user ?? null;
+        userRef.current = user;
 
-      if (user) {
-        try {
-          const remote = await loadRemote(supabase, user.id);
-          if (cancelled) return;
-          const merged = mergeSets(local, remote);
-          writeLocal(merged);
-          setChecked(merged);
-          if (merged.size !== remote.size) {
-            await saveRemote(supabase, user.id, merged);
+        if (user) {
+          try {
+            const remote = await loadRemote(supabase, user.id);
+            if (cancelled) return;
+            const merged = mergeSets(local, remote);
+            writeLocal(merged);
+            setChecked(merged);
+            if (merged.size !== remote.size) {
+              await saveRemote(supabase, user.id, merged);
+            }
+          } catch {
+            setChecked(local);
           }
-        } catch {
+        } else {
           setChecked(local);
         }
-      } else {
-        setChecked(local);
+      } catch {
+        if (!cancelled) setChecked(local);
       }
-      setHydrated(true);
+      if (!cancelled) setHydrated(true);
     }
 
     init();
