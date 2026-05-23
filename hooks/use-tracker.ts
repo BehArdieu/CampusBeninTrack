@@ -63,39 +63,50 @@ export function useTracker() {
 
     async function init() {
       const local = readLocal();
+      console.log("[tracker] init — localStorage ids:", [...local]);
 
       if (!supabase) {
+        console.log("[tracker] Supabase non configuré → mode local uniquement");
         setChecked(local);
         setHydrated(true);
         return;
       }
 
+      console.log("[tracker] Supabase configuré, appel getUser()…");
       try {
         const { data } = await supabase.auth.getUser();
         if (cancelled) return;
         const user = data?.user ?? null;
         userRef.current = user;
+        console.log("[tracker] getUser →", user ? `connecté (${user.id})` : "non connecté");
 
         if (user) {
           try {
             const remote = await loadRemote(supabase, user.id);
             if (cancelled) return;
             const merged = mergeSets(local, remote);
+            console.log("[tracker] merge local/remote:", { local: [...local], remote: [...remote], merged: [...merged] });
             writeLocal(merged);
             setChecked(merged);
             if (merged.size !== remote.size) {
+              console.log("[tracker] remote désynchronisé → upsert");
               await saveRemote(supabase, user.id, merged);
             }
-          } catch {
+          } catch (err) {
+            console.warn("[tracker] erreur chargement remote, fallback local:", err);
             setChecked(local);
           }
         } else {
           setChecked(local);
         }
-      } catch {
+      } catch (err) {
+        console.warn("[tracker] erreur getUser(), fallback local:", err);
         if (!cancelled) setChecked(local);
       }
-      if (!cancelled) setHydrated(true);
+      if (!cancelled) {
+        console.log("[tracker] ✔ hydraté");
+        setHydrated(true);
+      }
     }
 
     init();
@@ -134,16 +145,21 @@ export function useTracker() {
   const toggle = useCallback((id: string) => {
     setChecked((prev) => {
       const next = new Set(prev);
+      const action = next.has(id) ? "uncheck" : "check";
       if (next.has(id)) next.delete(id);
       else next.add(id);
+
+      console.log(`[tracker] toggle "${id}" → ${action} (total: ${next.size})`);
       writeLocal(next);
 
       const supabase = clientRef.current;
       if (supabase && userRef.current && !savingRef.current) {
         savingRef.current = true;
-        saveRemote(supabase, userRef.current.id, next).finally(() => {
-          savingRef.current = false;
-        });
+        console.log("[tracker] sync remote…");
+        saveRemote(supabase, userRef.current.id, next)
+          .then(() => console.log("[tracker] ✔ remote sauvegardé"))
+          .catch((err) => console.warn("[tracker] ✘ erreur sync remote:", err))
+          .finally(() => { savingRef.current = false; });
       }
 
       return next;
