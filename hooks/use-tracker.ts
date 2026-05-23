@@ -5,6 +5,16 @@ import { createClient } from "@/lib/supabase/client";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
 const STORAGE_KEY = "campusbenintrack-checklist-v1";
+const AUTH_TIMEOUT_MS = 4000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout après ${ms}ms`)), ms),
+    ),
+  ]);
+}
 
 function readLocal(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -74,7 +84,7 @@ export function useTracker() {
 
       console.log("[tracker] Supabase configuré, appel getUser()…");
       try {
-        const { data } = await supabase.auth.getUser();
+        const { data } = await withTimeout(supabase.auth.getUser(), AUTH_TIMEOUT_MS);
         if (cancelled) return;
         const user = data?.user ?? null;
         userRef.current = user;
