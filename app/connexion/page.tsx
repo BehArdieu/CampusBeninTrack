@@ -88,7 +88,7 @@ export default async function ConnexionPage({
       <p className="mt-8 text-center text-xs text-[var(--muted)]">
         Pas de mot de passe requis — un lien sécurisé est envoyé par e-mail.
         <br />
-        Sans connexion, ta progression reste enregistrée localement.
+        La connexion est nécessaire pour cocher les étapes et sauvegarder ta progression.
       </p>
     </main>
   );

@@ -6,19 +6,36 @@ import { useTracker } from "@/hooks/use-tracker";
 import { PhaseIllustration } from "@/components/illustrations";
 
 export default function SuiviPage() {
-  const { toggle, isChecked, countForIds, hydrated } = useTracker();
+  const { toggle, isChecked, countForIds, hydrated, authenticated } = useTracker();
 
   const allIds = PARCOURS_PHASES.flatMap((p) => p.checklist.map((c) => c.id));
   const globalDone = hydrated ? countForIds(allIds) : 0;
   const pct = Math.round(allIds.length ? (globalDone / allIds.length) * 100 : 0);
+  const canToggle = hydrated && authenticated;
+
+  if (hydrated && !authenticated) {
+    return (
+      <main className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4 py-16">
+        <h1 className="font-display text-3xl font-bold text-[var(--ink)]">Ma progression</h1>
+        <p className="mt-4 text-center text-[var(--ink-soft)]">
+          Connecte-toi pour suivre ta progression et cocher les étapes de ton parcours Campus France.
+        </p>
+        <Link
+          href="/connexion"
+          className="mt-8 rounded-full bg-[var(--forest)] px-6 py-3 text-sm font-semibold text-[var(--card)] transition hover:brightness-110"
+        >
+          Se connecter
+        </Link>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
       <header className="max-w-2xl">
         <h1 className="font-display text-3xl font-bold text-[var(--ink)] md:text-4xl">Ma progression globale</h1>
         <p className="mt-4 text-[var(--ink-soft)]">
-          Coche les cases depuis une fiche précise ou ici même. Les données restent uniquement dans ton
-          navigateur sur cet ordinateur ou ce téléphone.
+          Coche les cases depuis une fiche précise ou ici même. Ta progression est sauvegardée sur ton compte.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-6 rounded-2xl border border-[var(--border)] bg-[var(--card)] px-6 py-5">
           <div className="font-display text-4xl font-bold tabular-nums text-[var(--accent)]">{pct}%</div>
@@ -30,7 +47,7 @@ export default function SuiviPage() {
               />
             </div>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              {hydrated ? `${globalDone} sur ${allIds.length}` : "Synchronisation locale…"}
+              {hydrated ? `${globalDone} sur ${allIds.length}` : "Chargement…"}
             </p>
           </div>
         </div>
@@ -59,12 +76,12 @@ export default function SuiviPage() {
                 const done = hydrated && isChecked(item.id);
                 return (
                   <li key={item.id}>
-                    <label className="flex cursor-pointer gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 px-4 py-3 transition hover:border-[var(--forest)]/30">
+                    <label className={`flex gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 px-4 py-3 transition ${canToggle ? "cursor-pointer hover:border-[var(--forest)]/30" : "cursor-default opacity-60"}`}>
                       <input
                         type="checkbox"
                         checked={done}
                         onChange={() => toggle(item.id)}
-                        disabled={!hydrated}
+                        disabled={!canToggle}
                         className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--border-strong)] accent-[var(--accent)]"
                       />
                       <span className="min-w-0">

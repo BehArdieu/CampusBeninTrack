@@ -66,6 +66,7 @@ function mergeSets(a: Set<string>, b: Set<string>): Set<string> {
 export function useTracker() {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [hydrated, setHydrated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const userRef = useRef<User | null>(null);
   const clientRef = useRef<SupabaseClient | null>(null);
   const savingRef = useRef(false);
@@ -80,7 +81,7 @@ export function useTracker() {
       console.log("[tracker] init — localStorage ids:", [...local]);
 
       if (!supabase) {
-        console.log("[tracker] Supabase non configuré → mode local uniquement");
+        console.log("[tracker] Supabase non configuré → connexion requise mais impossible");
         setChecked(local);
         setHydrated(true);
         return;
@@ -95,6 +96,7 @@ export function useTracker() {
         console.log("[tracker] getUser →", user ? `connecté (${user.id})` : "non connecté");
 
         if (user) {
+          setAuthenticated(true);
           try {
             const remote = await loadRemote(supabase, user.id);
             if (cancelled) return;
@@ -111,6 +113,7 @@ export function useTracker() {
             setChecked(local);
           }
         } else {
+          console.log("[tracker] non connecté → checkboxes en lecture seule");
           setChecked(local);
         }
       } catch (err) {
@@ -130,6 +133,7 @@ export function useTracker() {
         async (_event, session) => {
           const user = session?.user ?? null;
           userRef.current = user;
+          setAuthenticated(!!user);
           console.log("[tracker] authStateChange →", user ? `connecté (${user.id})` : "déconnecté");
           if (user) {
             try {
@@ -159,6 +163,11 @@ export function useTracker() {
   }, []);
 
   const toggle = useCallback((id: string) => {
+    if (!userRef.current) {
+      console.warn("[tracker] toggle bloqué — connexion requise");
+      return;
+    }
+
     setChecked((prev) => {
       const next = new Set(prev);
       const action = next.has(id) ? "uncheck" : "check";
@@ -192,5 +201,5 @@ export function useTracker() {
     [checked],
   );
 
-  return { checked, toggle, isChecked, countForIds, hydrated };
+  return { checked, toggle, isChecked, countForIds, hydrated, authenticated };
 }
