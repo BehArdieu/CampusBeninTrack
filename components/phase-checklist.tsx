@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ChecklistItem } from "@/lib/parcours";
 import { useTracker } from "@/hooks/use-tracker";
 
@@ -10,9 +11,11 @@ type Props = {
 };
 
 export function PhaseChecklist({ items, phaseId, heading = "Ma checklist" }: Props) {
-  const { toggle, isChecked, hydrated } = useTracker();
+  const { toggle, isChecked, hydrated, authenticated } = useTracker();
 
   if (!items.length) return null;
+
+  const canToggle = hydrated && authenticated;
 
   return (
     <section
@@ -22,20 +25,36 @@ export function PhaseChecklist({ items, phaseId, heading = "Ma checklist" }: Pro
       <h2 id={`checklist-heading-${phaseId}`} className="font-display text-xl text-[var(--ink)]">
         {heading}
       </h2>
-      <p className="mt-2 text-sm text-[var(--muted)]">
-        Cochages enregistrés uniquement sur cet appareil (navigateur).
-      </p>
+
+      {hydrated && !authenticated ? (
+        <div className="mt-4 flex flex-col items-start gap-3 rounded-xl border border-[var(--border-strong)] bg-[var(--accent-soft)] px-4 py-4">
+          <p className="text-sm text-[var(--ink-soft)]">
+            Connecte-toi pour cocher les étapes et sauvegarder ta progression.
+          </p>
+          <Link
+            href="/connexion"
+            className="rounded-full bg-[var(--forest)] px-5 py-2 text-sm font-semibold text-[var(--card)] transition hover:brightness-110"
+          >
+            Se connecter
+          </Link>
+        </div>
+      ) : (
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          Ta progression est sauvegardée sur ton compte.
+        </p>
+      )}
+
       <ul className="mt-5 space-y-3">
         {items.map((item) => {
           const done = hydrated && isChecked(item.id);
           return (
             <li key={item.id}>
-              <label className="group flex cursor-pointer gap-3 rounded-xl border border-transparent px-1 py-2 transition hover:border-[var(--border)] hover:bg-[var(--surface)]">
+              <label className={`group flex gap-3 rounded-xl border border-transparent px-1 py-2 transition ${canToggle ? "cursor-pointer hover:border-[var(--border)] hover:bg-[var(--surface)]" : "cursor-default opacity-60"}`}>
                 <input
                   type="checkbox"
                   checked={done}
                   onChange={() => toggle(item.id)}
-                  disabled={!hydrated}
+                  disabled={!canToggle}
                   className="mt-1 h-5 w-5 shrink-0 rounded border-[var(--border-strong)] accent-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
                   aria-describedby={item.detail ? `hint-${item.id}` : undefined}
                 />
