@@ -5,6 +5,16 @@ import { createClient } from "@/lib/supabase/client";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
 const STORAGE_KEY = "campusbenintrack-checklist-v1";
+const AUTH_TIMEOUT_MS = 4000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout après ${ms}ms`)), ms),
+    ),
+  ]);
+}
 
 function readLocal(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -24,12 +34,15 @@ function writeLocal(set: Set<string>) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
 }
 
+const DB_TIMEOUT_MS = 5000;
+
 async function loadRemote(supabase: SupabaseClient, userId: string): Promise<Set<string>> {
-  const { data } = await supabase
+  const query = supabase
     .from("user_progress")
     .select("checked_ids")
     .eq("user_id", userId)
     .single();
+  const { data } = await withTimeout(Promise.resolve(query), DB_TIMEOUT_MS);
   if (data?.checked_ids && Array.isArray(data.checked_ids)) {
     return new Set(data.checked_ids as string[]);
   }
@@ -37,10 +50,11 @@ async function loadRemote(supabase: SupabaseClient, userId: string): Promise<Set
 }
 
 async function saveRemote(supabase: SupabaseClient, userId: string, set: Set<string>) {
-  await supabase.from("user_progress").upsert(
+  const query = supabase.from("user_progress").upsert(
     { user_id: userId, checked_ids: [...set], updated_at: new Date().toISOString() },
     { onConflict: "user_id" },
   );
+  await withTimeout(Promise.resolve(query), DB_TIMEOUT_MS);
 }
 
 function mergeSets(a: Set<string>, b: Set<string>): Set<string> {
@@ -74,7 +88,7 @@ export function useTracker() {
 
       console.log("[tracker] Supabase configuré, appel getUser()…");
       try {
-        const { data } = await supabase.auth.getUser();
+        const { data } = await withTimeout(supabase.auth.getUser(), AUTH_TIMEOUT_MS);
         if (cancelled) return;
         const user = data?.user ?? null;
         userRef.current = user;
@@ -116,18 +130,20 @@ export function useTracker() {
         async (_event, session) => {
           const user = session?.user ?? null;
           userRef.current = user;
+          console.log("[tracker] authStateChange →", user ? `connecté (${user.id})` : "déconnecté");
           if (user) {
             try {
               const local = readLocal();
               const remote = await loadRemote(supabase, user.id);
               const merged = mergeSets(local, remote);
+              console.log("[tracker] authStateChange merge:", { local: [...local], remote: [...remote], merged: [...merged] });
               writeLocal(merged);
               setChecked(merged);
               if (merged.size !== remote.size) {
                 await saveRemote(supabase, user.id, merged);
               }
-            } catch {
-              // Keep local state on remote failure
+            } catch (err) {
+              console.warn("[tracker] authStateChange erreur, on garde le local:", err);
             }
           }
         },
