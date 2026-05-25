@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { PARCOURS_PHASES } from "@/lib/parcours";
 import { useTracker } from "@/hooks/use-tracker";
+import { ProgressRibbonSkeleton } from "@/components/tracker-skeleton";
 
 const allIds = PARCOURS_PHASES.flatMap((p) => p.checklist.map((c) => c.id));
 
 export function GlobalProgressRibbon() {
   const { countForIds, hydrated, authenticated } = useTracker();
 
-  if (hydrated && !authenticated) {
+  if (!hydrated) return <ProgressRibbonSkeleton />;
+
+  if (!authenticated) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-3 text-sm text-[var(--ink-soft)]">
         <Link
@@ -23,7 +26,7 @@ export function GlobalProgressRibbon() {
     );
   }
 
-  const done = hydrated ? countForIds(allIds) : 0;
+  const done = countForIds(allIds);
   const pct = Math.round(allIds.length ? (done / allIds.length) * 100 : 0);
 
   return (
@@ -40,7 +43,7 @@ export function GlobalProgressRibbon() {
         />
       </div>
       <span className="hidden text-[var(--muted)] sm:inline">
-        {hydrated ? `${done} / ${allIds.length}` : "…"}
+        {done} / {allIds.length}
       </span>
     </div>
   );

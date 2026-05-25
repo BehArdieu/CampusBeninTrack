@@ -4,16 +4,19 @@ import Link from "next/link";
 import { PARCOURS_PHASES } from "@/lib/parcours";
 import { useTracker } from "@/hooks/use-tracker";
 import { PhaseIllustration } from "@/components/illustrations";
+import { SuiviSkeleton } from "@/components/tracker-skeleton";
 
 export default function SuiviPage() {
   const { toggle, isChecked, countForIds, hydrated, authenticated } = useTracker();
 
-  const allIds = PARCOURS_PHASES.flatMap((p) => p.checklist.map((c) => c.id));
-  const globalDone = hydrated ? countForIds(allIds) : 0;
-  const pct = Math.round(allIds.length ? (globalDone / allIds.length) * 100 : 0);
-  const canToggle = hydrated && authenticated;
+  if (!hydrated) return <SuiviSkeleton />;
 
-  if (hydrated && !authenticated) {
+  const allIds = PARCOURS_PHASES.flatMap((p) => p.checklist.map((c) => c.id));
+  const globalDone = countForIds(allIds);
+  const pct = Math.round(allIds.length ? (globalDone / allIds.length) * 100 : 0);
+  const canToggle = authenticated;
+
+  if (!authenticated) {
     return (
       <main className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center px-4 py-16">
         <h1 className="font-display text-3xl font-bold text-[var(--ink)]">Ma progression</h1>
@@ -73,7 +76,7 @@ export default function SuiviPage() {
             </div>
             <ul className="mt-8 space-y-3">
               {phase.checklist.map((item) => {
-                const done = hydrated && isChecked(item.id);
+                const done = isChecked(item.id);
                 return (
                   <li key={item.id}>
                     <label className={`flex gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)]/40 px-4 py-3 transition ${canToggle ? "cursor-pointer hover:border-[var(--forest)]/30" : "cursor-default opacity-60"}`}>
