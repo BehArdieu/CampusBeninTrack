@@ -1,6 +1,6 @@
 import { loginWithEmail, loginWithGoogle } from "./actions";
 
-export const metadata = { title: "Connexion — CampusBeninTrack" };
+export const metadata = { title: "Connexion — 360CampusFrance" };
 
 export default async function ConnexionPage({
   searchParams,

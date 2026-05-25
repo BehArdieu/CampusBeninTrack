@@ -1,4 +1,4 @@
--- User progress table for CampusBeninTrack
+-- User progress table for 360CampusFrance
 -- Stores the checked item IDs per authenticated user.
 
 create table if not exists public.user_progress (

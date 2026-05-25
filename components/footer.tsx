@@ -6,7 +6,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-12 sm:px-6">
         <p className="max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
           <strong className="font-medium text-[var(--ink)]">Avis important : </strong>
-          CampusBeninTrack est un aide-mémoire et un guide rédigé avec soin ; il{" "}
+          360CampusFrance est un aide-mémoire et un guide rédigé avec soin ; il{" "}
           <span className="text-[var(--ink-soft)]">
             ne remplace pas Campus France ni les administrations françaises officielles
           </span>
@@ -39,7 +39,7 @@ export function SiteFooter() {
             France-Visas
           </Link>
         </div>
-        <p className="text-xs text-[var(--muted)]">© {new Date().getFullYear()} CampusBeninTrack</p>
+        <p className="text-xs text-[var(--muted)]">© {new Date().getFullYear()} 360CampusFrance</p>
       </div>
     </footer>
   );

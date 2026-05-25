@@ -1,6 +1,6 @@
 ## Cursor Cloud specific instructions
 
-**Product:** CampusBeninTrack — a Next.js 16 app (French) guiding Beninese students through the Campus France process. User checklist progress is persisted in browser `localStorage` and optionally synced to Supabase when authenticated.
+**Product:** 360CampusFrance — a Next.js 16 app (French) guiding students through the Campus France process. User checklist progress is synced to Supabase (authentication required).
 
 **Single service:** Next.js dev server on port 3000.
 
