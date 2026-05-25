@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ChecklistItem } from "@/lib/parcours";
 import { useTracker } from "@/hooks/use-tracker";
+import { ChecklistSkeleton } from "@/components/tracker-skeleton";
 
 type Props = {
   items: ChecklistItem[];
@@ -15,7 +16,18 @@ export function PhaseChecklist({ items, phaseId, heading = "Ma checklist" }: Pro
 
   if (!items.length) return null;
 
-  const canToggle = hydrated && authenticated;
+  if (!hydrated) {
+    return (
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 shadow-sm">
+        <h2 className="font-display text-xl text-[var(--ink)]">{heading}</h2>
+        <div className="mt-5">
+          <ChecklistSkeleton count={items.length} />
+        </div>
+      </section>
+    );
+  }
+
+  const canToggle = authenticated;
 
   return (
     <section
@@ -26,7 +38,7 @@ export function PhaseChecklist({ items, phaseId, heading = "Ma checklist" }: Pro
         {heading}
       </h2>
 
-      {hydrated && !authenticated ? (
+      {!authenticated ? (
         <div className="mt-4 flex flex-col items-start gap-3 rounded-xl border border-[var(--border-strong)] bg-[var(--accent-soft)] px-4 py-4">
           <p className="text-sm text-[var(--ink-soft)]">
             Connecte-toi pour cocher les étapes et sauvegarder ta progression.
@@ -46,7 +58,7 @@ export function PhaseChecklist({ items, phaseId, heading = "Ma checklist" }: Pro
 
       <ul className="mt-5 space-y-3">
         {items.map((item) => {
-          const done = hydrated && isChecked(item.id);
+          const done = isChecked(item.id);
           return (
             <li key={item.id}>
               <label className={`group flex gap-3 rounded-xl border border-transparent px-1 py-2 transition ${canToggle ? "cursor-pointer hover:border-[var(--border)] hover:bg-[var(--surface)]" : "cursor-default opacity-60"}`}>
