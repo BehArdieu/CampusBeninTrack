@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User, SupabaseClient } from "@supabase/supabase-js";
 
-const STORAGE_PREFIX = "campusbenintrack-checklist-";
+const STORAGE_PREFIX = "360campusfrance-checklist-";
 const AUTH_TIMEOUT_MS = 4000;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -41,6 +41,7 @@ function writeLocal(userId: string, set: Set<string>) {
 function clearLegacyLocal() {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem("campusbenintrack-checklist-v1");
+  window.localStorage.removeItem("campusbenintrack-checklist-");
 }
 
 const DB_TIMEOUT_MS = 5000;

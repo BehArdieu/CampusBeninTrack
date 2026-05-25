@@ -23,8 +23,8 @@ export const metadata: Metadata = {
       ? new URL(process.env.NEXT_PUBLIC_SITE_URL)
       : undefined,
   title: {
-    default: "CampusBeninTrack — Procédure Campus France Bénin",
-    template: "%s · CampusBeninTrack",
+    default: "360CampusFrance — Procédure Campus France",
+    template: "%s · 360CampusFrance",
   },
   description:
     "Guide étape par étape pour étudiants béninois dans la procédure Campus France Bénin jusqu’à l’arrivée en France — validation du titre, sécurité sociale, CAF, impôts, banque.",

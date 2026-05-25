@@ -13,10 +13,7 @@ export function SiteHeader() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <Link href="/" className="group flex items-baseline gap-2">
           <span className="font-display text-xl font-semibold tracking-tight text-[var(--ink)]">
-            Campus<span className="text-[var(--accent)]">BeninTrack</span>
-          </span>
-          <span className="hidden text-xs uppercase tracking-[0.2em] text-[var(--muted)] sm:inline">
-            Campus France
+            360<span className="text-[var(--accent)]">CampusFrance</span>
           </span>
         </Link>
         <div className="flex flex-wrap items-center gap-2">

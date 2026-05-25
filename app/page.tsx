@@ -18,7 +18,7 @@ export default function HomePage() {
                 Votre parcours jusqu'à l'installation en France, étape après étape.
               </h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--ink-soft)]">
-                CampusBeninTrack rassemble une procédure claire depuis la création du dossier sur Études en
+                360CampusFrance rassemble une procédure claire depuis la création du dossier sur Études en
                 France jusqu'aux démarches d'accueil en France&nbsp;: validation du VLS‑TS en ligne,
                 banque française, dossier Caf, inscription à la Sécurité sociale étudiants (numéro, carte Vitale),
                 et rappels fiscaux — y compris la première déclaration à revenus nuls lorsque votre situation
