@@ -3,6 +3,7 @@ import { Libre_Baskerville, DM_Sans } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/header";
 import { SiteFooter } from "@/components/footer";
+import { BackendAuthProvider } from "@/components/backend-auth-provider";
 
 const libre = Libre_Baskerville({
   subsets: ["latin"],
@@ -38,9 +39,11 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${libre.variable} ${dmSans.variable} h-full`}>
       <body className={`${dmSans.className} min-h-full flex flex-col antialiased`}>
-        <SiteHeader />
-        <div className="flex-1">{children}</div>
-        <SiteFooter />
+        <BackendAuthProvider>
+          <SiteHeader />
+          <div className="flex-1">{children}</div>
+          <SiteFooter />
+        </BackendAuthProvider>
       </body>
     </html>
   );
