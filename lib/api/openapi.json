@@ -1,0 +1,1269 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CampusBeninTrack API",
+    "version": "1.0.0",
+    "description": "Plateforme de mise en relation entre étudiants africains et membres de la diaspora pour la recherche de logement en France."
+  },
+  "servers": [
+    {
+      "url": "https://360campusfrance.mega-devs.com/api"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/annonces": {
+      "get": {
+        "operationId": "annonces.index",
+        "description": "Authenticated diaspora members see all requests; students see only their own.",
+        "summary": "List all housing requests",
+        "tags": [
+          "Annonces"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "annonces.store",
+        "summary": "Create a new housing request",
+        "tags": [
+          "Annonces"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titre": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "photo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "universite": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "ville_id": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "titre",
+                  "description",
+                  "ville_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 201
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/annonces/{annonce}": {
+      "get": {
+        "operationId": "annonces.show",
+        "summary": "Get a specific housing request with all related data",
+        "tags": [
+          "Annonces"
+        ],
+        "parameters": [
+          {
+            "name": "annonce",
+            "in": "path",
+            "required": true,
+            "description": "The annonce ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "annonces.update",
+        "summary": "Update a housing request",
+        "tags": [
+          "Annonces"
+        ],
+        "parameters": [
+          {
+            "name": "annonce",
+            "in": "path",
+            "required": true,
+            "description": "The annonce ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "titre": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "photo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "universite": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "diaspora_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "annonces.destroy",
+        "summary": "Delete a housing request",
+        "tags": [
+          "Annonces"
+        ],
+        "parameters": [
+          {
+            "name": "annonce",
+            "in": "path",
+            "required": true,
+            "description": "The annonce ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/auth/google": {
+      "post": {
+        "operationId": "auth.googleAuth",
+        "summary": "Authenticate user via Google OAuth",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "google_id": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "nom": {
+                    "type": "string"
+                  },
+                  "prenom": {
+                    "type": "string"
+                  },
+                  "photo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "google_id",
+                  "email",
+                  "nom",
+                  "prenom"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "auth.register",
+        "summary": "Register a new user account",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nom": {
+                    "type": "string"
+                  },
+                  "prenom": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "telephone": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8
+                  },
+                  "ville_id": {
+                    "type": "integer"
+                  },
+                  "role": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "nom",
+                  "prenom",
+                  "email",
+                  "telephone",
+                  "password",
+                  "ville_id",
+                  "role"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 201
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "auth.login",
+        "summary": "Login with email and password",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "a@a.aa"
+                  },
+                  "password": {
+                    "type": "string",
+                    "example": "aaaaaaaa"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "auth.logout",
+        "summary": "Logout the authenticated user",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/user": {
+      "get": {
+        "operationId": "auth.user",
+        "summary": "Get current authenticated user",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/positionnements": {
+      "get": {
+        "operationId": "positionnements.index",
+        "description": "Diaspora members see only their own; students see all on their announcements.",
+        "summary": "List positioning requests",
+        "tags": [
+          "Positionnements"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "positionnements.store",
+        "summary": "Express interest to help with a housing request",
+        "tags": [
+          "Positionnements"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "annonce_id": {
+                    "type": "integer"
+                  },
+                  "message": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "annonce_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 201
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/positionnements/{positionnement}": {
+      "get": {
+        "operationId": "positionnements.show",
+        "tags": [
+          "Positionnements"
+        ],
+        "parameters": [
+          {
+            "name": "positionnement",
+            "in": "path",
+            "required": true,
+            "description": "The positionnement ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Positionnement"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "positionnements.update",
+        "tags": [
+          "Positionnements"
+        ],
+        "parameters": [
+          {
+            "name": "positionnement",
+            "in": "path",
+            "required": true,
+            "description": "The positionnement ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Positionnement"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "positionnements.destroy",
+        "tags": [
+          "Positionnements"
+        ],
+        "parameters": [
+          {
+            "name": "positionnement",
+            "in": "path",
+            "required": true,
+            "description": "The positionnement ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "const": "Positionnement deleted"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/reponses": {
+      "get": {
+        "operationId": "reponses.index",
+        "description": "Diaspora members see only their proposals; students see proposals for their announcements.",
+        "summary": "List housing proposals",
+        "tags": [
+          "Reponses"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "reponses.store",
+        "description": "Upload housing details and multiple images. Images stored as separate records.",
+        "summary": "Propose a housing option for a request",
+        "tags": [
+          "Reponses"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "annonce_id": {
+                    "type": "integer"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "prix": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "images": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string",
+                      "format": "binary",
+                      "contentMediaType": "application/octet-stream",
+                      "maxLength": 5120
+                    }
+                  }
+                },
+                "required": [
+                  "annonce_id",
+                  "address",
+                  "prix"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 201
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/reponses/{reponse}": {
+      "get": {
+        "operationId": "reponses.show",
+        "tags": [
+          "Reponses"
+        ],
+        "parameters": [
+          {
+            "name": "reponse",
+            "in": "path",
+            "required": true,
+            "description": "The reponse ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "reponses.update",
+        "tags": [
+          "Reponses"
+        ],
+        "parameters": [
+          {
+            "name": "reponse",
+            "in": "path",
+            "required": true,
+            "description": "The reponse ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string"
+                  },
+                  "prix": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "images": {
+                    "type": [
+                      "array",
+                      "null"
+                    ],
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "reponses.destroy",
+        "tags": [
+          "Reponses"
+        ],
+        "parameters": [
+          {
+            "name": "reponse",
+            "in": "path",
+            "required": true,
+            "description": "The reponse ID",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "const": "Reponse deleted"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "$ref": "#/components/responses/AuthorizationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/villes": {
+      "get": {
+        "operationId": "villes.index",
+        "summary": "List all cities",
+        "tags": [
+          "Villes"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/villes/search": {
+      "get": {
+        "operationId": "villes.search",
+        "summary": "Search cities by name",
+        "tags": [
+          "Villes"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "const": 200
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Positionnement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "annonce_id": {
+            "type": "integer"
+          },
+          "diaspora_id": {
+            "type": "integer"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/PositionnementStatus"
+          },
+          "read_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "annonce_id",
+          "diaspora_id",
+          "message",
+          "status",
+          "read_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Positionnement"
+      },
+      "PositionnementStatus": {
+        "type": "string",
+        "description": "| |\n|---|\n| `en_attente` <br/> En attente de réponse de l'étudiant |\n| `lu` <br/> Visualisée par l'étudiant |\n| `accepte` <br/> Acceptée, la diaspora aidera l'étudiant |\n| `refuse` <br/> Refusée par l'étudiant |",
+        "enum": [
+          "en_attente",
+          "lu",
+          "accepte",
+          "refuse"
+        ],
+        "title": "PositionnementStatus"
+      },
+      "Reponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "annonce_id": {
+            "type": "integer"
+          },
+          "diaspora_id": {
+            "type": "integer"
+          },
+          "address": {
+            "type": "string"
+          },
+          "prix": {
+            "type": "number"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReponseStatus"
+          },
+          "read_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "annonce_id",
+          "diaspora_id",
+          "address",
+          "prix",
+          "status",
+          "read_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Reponse"
+      },
+      "ReponseStatus": {
+        "type": "string",
+        "description": "| |\n|---|\n| `en_attente` <br/> Proposition en attente de réaction de l'étudiant |\n| `accepte` <br/> Proposition acceptée par l'étudiant |\n| `visite_planifiee` <br/> Visite du logement planifiée |\n| `visite_effectuee` <br/> Visite du logement effectuée |\n| `offre_acceptee` <br/> Offre acceptée après visite |\n| `en_cours_paiement` <br/> Paiement en cours |\n| `paiement_effectue` <br/> Paiement effectué |\n| `contrat_signe` <br/> Contrat signé, logement confirmé |\n| `refusee` <br/> Proposition refusée |",
+        "enum": [
+          "en_attente",
+          "accepte",
+          "visite_planifiee",
+          "visite_effectuee",
+          "offre_acceptee",
+          "en_cours_paiement",
+          "paiement_effectue",
+          "contrat_signe",
+          "refusee"
+        ],
+        "title": "ReponseStatus"
+      }
+    },
+    "responses": {
+      "ValidationException": {
+        "description": "Validation error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Errors overview."
+                },
+                "errors": {
+                  "type": "object",
+                  "description": "A detailed description of each field that failed validation.",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "message",
+                "errors"
+              ]
+            }
+          }
+        }
+      },
+      "AuthenticationException": {
+        "description": "Unauthenticated",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "ModelNotFoundException": {
+        "description": "Not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "AuthorizationException": {
+        "description": "Authorization error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
