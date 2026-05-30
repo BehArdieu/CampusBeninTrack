@@ -2,8 +2,8 @@ import Link from "next/link";
 import { AuthButton } from "./auth-button";
 
 const links = [
-  { href: "/", label: "Accueil" },
-  { href: "/parcours", label: "Parcours complet" },
+  { href: "/annonces", label: "Logement" },
+  { href: "/parcours", label: "Parcours" },
   { href: "/suivi", label: "Ma progression" },
 ];
 
