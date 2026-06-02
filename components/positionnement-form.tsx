@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api/client";
-import { createPositionnement } from "@/lib/api/positionnements";
+import { createPositionnement, POSITIONNEMENT_STATUS_LABELS } from "@/lib/api/positionnements";
 import type { Positionnement } from "@/lib/api/types";
 
 type Props = {
@@ -15,18 +15,31 @@ export function PositionnementForm({ annonceId, existing, onSuccess }: Props) {
   const [message, setMessage] = useState(existing?.message ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState<Positionnement | null>(existing ?? null);
 
-  if (existing) {
+  useEffect(() => {
+    if (existing) setConfirmed(existing);
+  }, [existing]);
+
+  const alreadyPositioned = confirmed;
+
+  if (alreadyPositioned) {
     return (
       <div className="rounded-2xl border border-[var(--forest)]/30 bg-[var(--forest)]/5 p-6">
         <p className="font-display text-lg font-semibold text-[var(--forest)]">
           Tu t’es déjà positionné sur cette annonce
         </p>
-        {existing.message ? (
-          <p className="mt-3 text-sm text-[var(--ink-soft)] whitespace-pre-wrap">{existing.message}</p>
+        {alreadyPositioned.message ? (
+          <p className="mt-3 text-sm text-[var(--ink-soft)] whitespace-pre-wrap">
+            {alreadyPositioned.message}
+          </p>
         ) : null}
+        <p className="mt-3 text-sm font-medium text-[var(--ink-soft)]">
+          Statut : {POSITIONNEMENT_STATUS_LABELS[alreadyPositioned.status]}
+        </p>
         <p className="mt-4 text-sm text-[var(--muted)]">
-          L’étudiant peut accepter ou refuser ta proposition. Tu seras notifié lorsque le statut évolue.
+          Un seul positionnement par annonce est possible. L’étudiant peut accepter ou refuser ta
+          proposition.
         </p>
       </div>
     );
@@ -34,20 +47,23 @@ export function PositionnementForm({ annonceId, existing, onSuccess }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (confirmed) return;
     setSubmitting(true);
     setError(null);
     try {
       const created = await createPositionnement(annonceId, message);
+      setConfirmed(created);
       onSuccess(created);
     } catch (err) {
       if (err instanceof ApiError) {
         const errors = err.body.errors as Record<string, string[]> | undefined;
         const first = errors && Object.values(errors)[0]?.[0];
-        setError(
-          first ||
-            (err.body.message as string) ||
-            "Impossible de t’enregistrer sur cette annonce.",
-        );
+        const msg = (err.body.message as string) || "";
+        if (err.status === 422 && /déjà|deja|already|unique|exist/i.test(msg + (first ?? ""))) {
+          setError("Tu es déjà positionné sur cette annonce.");
+        } else {
+          setError(first || msg || "Impossible de t’enregistrer sur cette annonce.");
+        }
       } else {
         setError("Impossible de t’enregistrer sur cette annonce.");
       }
