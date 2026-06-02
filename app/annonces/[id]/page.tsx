@@ -25,7 +25,9 @@ export default function AnnonceDetailPage() {
 
   const annonceId = Number(id);
   const isOwner =
-    annonce && backendUser ? annonce.user_id === backendUser.id : false;
+    annonce && backendUser
+      ? Number(annonce.user_id) === Number(backendUser.id)
+      : false;
   const isDiaspora = isDiasporaRole(backendUser?.role);
   const isEtudiant = isEtudiantRole(backendUser?.role);
 
@@ -44,7 +46,7 @@ export default function AnnonceDetailPage() {
         if (cancelled) return;
 
         setAnnonce(data);
-        const owner = data.user_id === user.id;
+        const owner = Number(data.user_id) === Number(user.id);
 
         if (owner) {
           const list = data.positionnements?.length
@@ -204,7 +206,9 @@ export default function AnnonceDetailPage() {
         {showStudentPanel && (
           <div className="mt-10">
             <AnnoncePositionnementsPanel
+              annonceId={annonce.id}
               positionnements={positionnements}
+              canManage={isOwner}
               onUpdate={handlePositionnementUpdated}
             />
           </div>

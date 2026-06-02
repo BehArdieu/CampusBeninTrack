@@ -26,6 +26,7 @@ export interface Annonce {
   universite: string | null;
   ville_id: number;
   user_id: number;
+  diaspora_id?: number | null;
   status: string;
   created_at: string;
   updated_at: string;
