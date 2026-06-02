@@ -5,7 +5,10 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
 import { apiFetch } from "@/lib/api/client";
-import { listPositionnementsForAnnonce } from "@/lib/api/positionnements";
+import {
+  getMyPositionnementForAnnonce,
+  listPositionnementsForAnnonce,
+} from "@/lib/api/positionnements";
 import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
 import { PositionnementForm } from "@/components/positionnement-form";
 import { AnnoncePositionnementsPanel } from "@/components/annonce-positionnements-panel";
@@ -27,28 +30,52 @@ export default function AnnonceDetailPage() {
   const isEtudiant = isEtudiantRole(backendUser?.role);
 
   useEffect(() => {
-    if (!ready || !backendToken || !id) return;
+    if (!ready || !backendToken || !id || !backendUser) return;
 
-    setLoading(true);
-    Promise.all([
-      apiFetch<Annonce>(`/annonces/${id}`),
-      listPositionnementsForAnnonce(annonceId).catch(() => [] as Positionnement[]),
-    ])
-      .then(([data, pos]) => {
+    let cancelled = false;
+
+    async function load() {
+      const user = backendUser;
+      if (!user) return;
+
+      setLoading(true);
+      try {
+        const data = await apiFetch<Annonce>(`/annonces/${id}`);
+        if (cancelled) return;
+
         setAnnonce(data);
-        const list = data.positionnements?.length ? data.positionnements : pos;
-        setPositionnements(list);
-        if (backendUser && isDiasporaRole(backendUser.role)) {
-          setMyPositionnement(
-            list.find((p) => p.diaspora_id === backendUser.id) ?? null,
-          );
+        const owner = data.user_id === user.id;
+
+        if (owner) {
+          const list = data.positionnements?.length
+            ? data.positionnements
+            : await listPositionnementsForAnnonce(annonceId).catch(() => [] as Positionnement[]);
+          setPositionnements(list);
+          setMyPositionnement(null);
+        } else if (isDiasporaRole(user.role)) {
+          const mine = await getMyPositionnementForAnnonce(annonceId, user.id);
+          if (cancelled) return;
+          setMyPositionnement(mine);
+          setPositionnements([]);
+        } else {
+          setPositionnements([]);
+          setMyPositionnement(null);
         }
+
         setError(null);
-      })
-      .catch((err) => {
-        setError(err.status === 404 ? "Annonce introuvable." : "Erreur de chargement.");
-      })
-      .finally(() => setLoading(false));
+      } catch (err: unknown) {
+        if (cancelled) return;
+        const status = err instanceof Object && "status" in err ? (err as { status: number }).status : 0;
+        setError(status === 404 ? "Annonce introuvable." : "Erreur de chargement.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [ready, backendToken, id, annonceId, backendUser]);
 
   function handlePositionnementCreated(p: Positionnement) {

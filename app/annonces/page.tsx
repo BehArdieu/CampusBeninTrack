@@ -5,9 +5,16 @@ import { useEffect, useState } from "react";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
 import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
 import { apiFetch } from "@/lib/api/client";
+import { listPositionnements } from "@/lib/api/positionnements";
 import type { Annonce, PaginatedResponse } from "@/lib/api/types";
 
-function AnnonceCard({ annonce }: { annonce: Annonce }) {
+function AnnonceCard({
+  annonce,
+  alreadyPositioned,
+}: {
+  annonce: Annonce;
+  alreadyPositioned?: boolean;
+}) {
   return (
     <Link
       href={`/annonces/${annonce.id}`}
@@ -17,9 +24,16 @@ function AnnonceCard({ annonce }: { annonce: Annonce }) {
         <h3 className="font-display text-lg font-semibold text-[var(--ink)] group-hover:text-[var(--forest)]">
           {annonce.titre}
         </h3>
-        <span className="shrink-0 rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
-          {annonce.status ?? "active"}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {alreadyPositioned ? (
+            <span className="rounded-full bg-[var(--forest)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--forest)]">
+              Déjà positionné
+            </span>
+          ) : null}
+          <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
+            {annonce.status ?? "active"}
+          </span>
+        </div>
       </div>
 
       <p className="mt-2 line-clamp-2 flex-1 text-sm text-[var(--muted)]">
@@ -76,6 +90,7 @@ export default function AnnoncesPage() {
   const isDiaspora = isDiasporaRole(backendUser?.role);
   const isEtudiant = isEtudiantRole(backendUser?.role);
   const [annonces, setAnnonces] = useState<Annonce[]>([]);
+  const [positionedIds, setPositionedIds] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,9 +102,25 @@ export default function AnnoncesPage() {
     }
 
     setLoading(true);
-    apiFetch<PaginatedResponse<Annonce>>("/annonces")
-      .then((res) => {
+    const loads: [
+      Promise<PaginatedResponse<Annonce>>,
+      Promise<Set<number>>?,
+    ] = [
+      apiFetch<PaginatedResponse<Annonce>>("/annonces"),
+      isDiaspora && backendUser
+        ? listPositionnements().then(
+            (list) => new Set(list.map((p) => p.annonce_id)),
+          )
+        : undefined,
+    ];
+
+    Promise.all([
+      loads[0],
+      loads[1] ?? Promise.resolve(new Set<number>()),
+    ])
+      .then(([res, ids]) => {
         setAnnonces(res.data);
+        setPositionedIds(ids);
         setError(null);
       })
       .catch((err) => {
@@ -97,7 +128,7 @@ export default function AnnoncesPage() {
         setError("Impossible de charger les annonces.");
       })
       .finally(() => setLoading(false));
-  }, [ready, backendToken]);
+  }, [ready, backendToken, isDiaspora, backendUser]);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
@@ -172,7 +203,11 @@ export default function AnnoncesPage() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {annonces.map((a) => (
-              <AnnonceCard key={a.id} annonce={a} />
+              <AnnonceCard
+                key={a.id}
+                annonce={a}
+                alreadyPositioned={positionedIds.has(a.id)}
+              />
             ))}
           </div>
         )}
