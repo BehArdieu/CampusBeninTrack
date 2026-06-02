@@ -1,3 +1,16 @@
+export type UserRole = "etudiant" | "diaspora" | string;
+
+export interface BackendUser {
+  id: number;
+  nom: string;
+  prenom: string;
+  email: string;
+  role: UserRole;
+  photo: string | null;
+  telephone?: string | null;
+  ville_id?: number | null;
+}
+
 export interface Ville {
   id: number;
   ville: string;
@@ -20,7 +33,10 @@ export interface Annonce {
   user?: { id: number; nom: string; prenom: string; photo: string | null };
   positionnements_count?: number;
   reponses_count?: number;
+  positionnements?: Positionnement[];
 }
+
+export type PositionnementStatus = "en_attente" | "lu" | "accepte" | "refuse";
 
 export interface PaginatedResponse<T> {
   current_page: number;
@@ -35,10 +51,12 @@ export interface Positionnement {
   annonce_id: number;
   diaspora_id: number;
   message: string | null;
-  status: "en_attente" | "lu" | "accepte" | "refuse";
+  status: PositionnementStatus;
   read_at: string | null;
   created_at: string;
   updated_at: string;
+  diaspora?: { id: number; nom: string; prenom: string; photo: string | null };
+  annonce?: Pick<Annonce, "id" | "titre" | "ville" | "status">;
 }
 
 export interface Reponse {

@@ -5,29 +5,65 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
 import { apiFetch } from "@/lib/api/client";
-import type { Annonce } from "@/lib/api/types";
+import { listPositionnementsForAnnonce } from "@/lib/api/positionnements";
+import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
+import { PositionnementForm } from "@/components/positionnement-form";
+import { AnnoncePositionnementsPanel } from "@/components/annonce-positionnements-panel";
+import type { Annonce, Positionnement } from "@/lib/api/types";
 
 export default function AnnonceDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { backendToken, ready } = useBackendAuth();
+  const { backendToken, backendUser, ready } = useBackendAuth();
   const [annonce, setAnnonce] = useState<Annonce | null>(null);
+  const [positionnements, setPositionnements] = useState<Positionnement[]>([]);
+  const [myPositionnement, setMyPositionnement] = useState<Positionnement | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const annonceId = Number(id);
+  const isOwner =
+    annonce && backendUser ? annonce.user_id === backendUser.id : false;
+  const isDiaspora = isDiasporaRole(backendUser?.role);
+  const isEtudiant = isEtudiantRole(backendUser?.role);
 
   useEffect(() => {
     if (!ready || !backendToken || !id) return;
 
     setLoading(true);
-    apiFetch<Annonce>(`/annonces/${id}`)
-      .then((data) => {
+    Promise.all([
+      apiFetch<Annonce>(`/annonces/${id}`),
+      listPositionnementsForAnnonce(annonceId).catch(() => [] as Positionnement[]),
+    ])
+      .then(([data, pos]) => {
         setAnnonce(data);
+        const list = data.positionnements?.length ? data.positionnements : pos;
+        setPositionnements(list);
+        if (backendUser && isDiasporaRole(backendUser.role)) {
+          setMyPositionnement(
+            list.find((p) => p.diaspora_id === backendUser.id) ?? null,
+          );
+        }
         setError(null);
       })
       .catch((err) => {
         setError(err.status === 404 ? "Annonce introuvable." : "Erreur de chargement.");
       })
       .finally(() => setLoading(false));
-  }, [ready, backendToken, id]);
+  }, [ready, backendToken, id, annonceId, backendUser]);
+
+  function handlePositionnementCreated(p: Positionnement) {
+    setMyPositionnement(p);
+    setPositionnements((prev) => {
+      if (prev.some((x) => x.id === p.id)) return prev;
+      return [p, ...prev];
+    });
+  }
+
+  function handlePositionnementUpdated(updated: Positionnement) {
+    setPositionnements((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p)),
+    );
+  }
 
   if (!ready || loading) {
     return (
@@ -72,6 +108,9 @@ export default function AnnonceDetailPage() {
 
   if (!annonce) return null;
 
+  const showDiasporaForm = !isOwner && (isDiaspora || !isEtudiant);
+  const showStudentPanel = isOwner;
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <nav className="text-sm text-[var(--muted)]">
@@ -102,11 +141,22 @@ export default function AnnonceDetailPage() {
             </span>
           )}
           <span className="inline-flex items-center gap-1 rounded-full bg-[var(--surface)] px-3 py-1">
-            📅 {new Date(annonce.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            📅{" "}
+            {new Date(annonce.created_at).toLocaleDateString("fr-FR", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })}
           </span>
+          {(annonce.positionnements_count ?? positionnements.length) > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--forest)]/10 px-3 py-1 text-[var(--forest)]">
+              🤝 {annonce.positionnements_count ?? positionnements.length} positionnement
+              {(annonce.positionnements_count ?? positionnements.length) > 1 ? "s" : ""}
+            </span>
+          )}
         </div>
 
-        {annonce.user && (
+        {annonce.user && !isOwner && (
           <div className="mt-4 flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--forest)] text-xs font-bold text-[var(--card)]">
               {annonce.user.prenom?.[0]?.toUpperCase() ?? "?"}
@@ -119,18 +169,52 @@ export default function AnnonceDetailPage() {
 
         <div className="mt-8 rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
           <h2 className="font-display text-lg font-semibold text-[var(--ink)]">Description</h2>
-          <p className="mt-3 whitespace-pre-wrap text-[var(--ink-soft)] leading-relaxed">
+          <p className="mt-3 whitespace-pre-wrap leading-relaxed text-[var(--ink-soft)]">
             {annonce.description}
           </p>
         </div>
 
-        <div className="mt-8 flex flex-wrap gap-4">
+        {showStudentPanel && (
+          <div className="mt-10">
+            <AnnoncePositionnementsPanel
+              positionnements={positionnements}
+              onUpdate={handlePositionnementUpdated}
+            />
+          </div>
+        )}
+
+        {showDiasporaForm && (
+          <div className="mt-10">
+            <PositionnementForm
+              annonceId={annonce.id}
+              existing={myPositionnement}
+              onSuccess={handlePositionnementCreated}
+            />
+          </div>
+        )}
+
+        {isEtudiant && !isOwner && (
+          <p className="mt-10 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/50 px-4 py-3 text-sm text-[var(--muted)]">
+            Cette annonce appartient à un autre étudiant. Seuls les membres de la diaspora peuvent s’y
+            positionner.
+          </p>
+        )}
+
+        <div className="mt-10 flex flex-wrap gap-4">
           <Link
             href="/annonces"
             className="inline-flex rounded-full border border-[var(--border)] px-5 py-2 text-sm font-medium text-[var(--ink-soft)] transition hover:border-[var(--forest)] hover:text-[var(--forest)]"
           >
             ← Retour aux annonces
           </Link>
+          {isDiaspora && (
+            <Link
+              href="/positionnements"
+              className="inline-flex rounded-full border border-[var(--forest)] px-5 py-2 text-sm font-medium text-[var(--forest)] transition hover:bg-[var(--forest)] hover:text-[var(--card)]"
+            >
+              Mes positionnements
+            </Link>
+          )}
         </div>
       </article>
     </main>

@@ -1,9 +1,33 @@
 import type { User } from "@supabase/supabase-js";
 import { apiFetch, storeToken, clearToken, getStoredToken } from "./client";
+import type { BackendUser } from "./types";
+
+const USER_KEY = "360cf-api-user";
 
 interface BackendAuthResponse {
   token: string;
-  user: Record<string, unknown>;
+  user: BackendUser;
+}
+
+export function storeBackendUser(user: BackendUser) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function getStoredBackendUser(): BackendUser | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(USER_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as BackendUser;
+  } catch {
+    return null;
+  }
+}
+
+export function clearBackendUser() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(USER_KEY);
 }
 
 function extractGoogleId(user: User): string | null {
@@ -44,6 +68,7 @@ export async function syncWithBackend(user: User): Promise<string | null> {
 
     console.log("[api-auth] ✔ sync backend réussie, token obtenu");
     storeToken(res.token);
+    if (res.user) storeBackendUser(res.user);
     return res.token;
   } catch (err) {
     console.warn("[api-auth] ✘ erreur sync backend:", err);
@@ -62,4 +87,5 @@ export async function logoutBackend(): Promise<void> {
     }
   }
   clearToken();
+  clearBackendUser();
 }
