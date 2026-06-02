@@ -1,13 +1,27 @@
+"use client";
+
 import Link from "next/link";
 import { AuthButton } from "./auth-button";
+import { useBackendAuth } from "@/hooks/use-backend-auth";
+import { isDiasporaRole } from "@/lib/api/user";
 
-const links = [
+const baseLinks = [
   { href: "/annonces", label: "Logement" },
   { href: "/parcours", label: "Parcours" },
   { href: "/suivi", label: "Ma progression" },
 ];
 
 export function SiteHeader() {
+  const { backendUser, backendToken } = useBackendAuth();
+  const links =
+    backendToken && isDiasporaRole(backendUser?.role)
+      ? [
+          ...baseLinks.slice(0, 1),
+          { href: "/positionnements", label: "Mes positionnements" },
+          ...baseLinks.slice(1),
+        ]
+      : baseLinks;
+
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">

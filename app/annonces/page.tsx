@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
+import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
 import { apiFetch } from "@/lib/api/client";
 import type { Annonce, PaginatedResponse } from "@/lib/api/types";
 
@@ -36,6 +37,11 @@ function AnnonceCard({ annonce }: { annonce: Annonce }) {
             🎓 {annonce.universite}
           </span>
         )}
+        {(annonce.positionnements_count ?? 0) > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--forest)]/10 px-2.5 py-1 text-[var(--forest)]">
+            🤝 {annonce.positionnements_count}
+          </span>
+        )}
         <span className="ml-auto text-[var(--muted)]">
           {new Date(annonce.created_at).toLocaleDateString("fr-FR")}
         </span>
@@ -66,7 +72,9 @@ function AnnoncesListSkeleton() {
 }
 
 export default function AnnoncesPage() {
-  const { backendToken, ready } = useBackendAuth();
+  const { backendToken, backendUser, ready } = useBackendAuth();
+  const isDiaspora = isDiasporaRole(backendUser?.role);
+  const isEtudiant = isEtudiantRole(backendUser?.role);
   const [annonces, setAnnonces] = useState<Annonce[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,15 +107,25 @@ export default function AnnoncesPage() {
             Recherches de logement
           </h1>
           <p className="mt-2 text-[var(--ink-soft)]">
-            Les étudiants publient leurs besoins, la diaspora propose des solutions.
+            {isDiaspora
+              ? "Parcours les demandes des étudiants et positionne-toi pour les accompagner."
+              : "Les étudiants publient leurs besoins, la diaspora se positionne pour aider."}
           </p>
         </div>
-        {backendToken && (
+        {backendToken && isEtudiant && (
           <Link
             href="/annonces/new"
             className="inline-flex shrink-0 rounded-full bg-[var(--forest)] px-6 py-3 text-sm font-semibold text-[var(--card)] shadow-md transition hover:brightness-110"
           >
             Publier une demande
+          </Link>
+        )}
+        {backendToken && isDiaspora && (
+          <Link
+            href="/positionnements"
+            className="inline-flex shrink-0 rounded-full border-2 border-[var(--forest)] px-6 py-3 text-sm font-semibold text-[var(--forest)] transition hover:bg-[var(--forest)] hover:text-[var(--card)]"
+          >
+            Mes positionnements
           </Link>
         )}
       </div>
