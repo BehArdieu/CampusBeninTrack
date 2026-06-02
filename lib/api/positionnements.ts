@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, ApiError } from "./client";
 import type { PaginatedResponse, Positionnement, PositionnementStatus } from "./types";
 
 type PositionnementsIndexResponse =
@@ -52,10 +52,21 @@ export async function updatePositionnementStatus(
   id: number,
   status: PositionnementStatus,
 ): Promise<Positionnement> {
-  return apiFetch<Positionnement>(`/positionnements/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({ status }),
-  });
+  const body = JSON.stringify({ status });
+  try {
+    return await apiFetch<Positionnement>(`/positionnements/${id}`, {
+      method: "PATCH",
+      body,
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 405) {
+      return apiFetch<Positionnement>(`/positionnements/${id}`, {
+        method: "PUT",
+        body,
+      });
+    }
+    throw err;
+  }
 }
 
 export const POSITIONNEMENT_STATUS_LABELS: Record<PositionnementStatus, string> = {

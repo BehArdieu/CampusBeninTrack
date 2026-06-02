@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { ApiError } from "@/lib/api/client";
 import {
-  POSITIONNEMENT_STATUS_LABELS,
-  updatePositionnementStatus,
-} from "@/lib/api/positionnements";
+  acceptPositionnementAsStudent,
+  refusePositionnementAsStudent,
+} from "@/lib/api/annonces";
+import { POSITIONNEMENT_STATUS_LABELS } from "@/lib/api/positionnements";
 import type { Positionnement, PositionnementStatus } from "@/lib/api/types";
 
 type Props = {
+  annonceId: number;
   positionnements: Positionnement[];
+  canManage?: boolean;
   onUpdate: (updated: Positionnement) => void;
 };
 
@@ -26,22 +29,40 @@ function statusBadgeClass(status: PositionnementStatus): string {
   }
 }
 
-export function AnnoncePositionnementsPanel({ positionnements, onUpdate }: Props) {
+function formatActionError(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 403) {
+      return "Action refusée : seul l’étudiant auteur de cette annonce peut accepter ou refuser. Vérifie que tu es connecté avec le compte qui a publié la demande.";
+    }
+    return (err.body.message as string) || "Action impossible.";
+  }
+  return "Action impossible.";
+}
+
+export function AnnoncePositionnementsPanel({
+  annonceId,
+  positionnements,
+  canManage = true,
+  onUpdate,
+}: Props) {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function setStatus(id: number, status: "accepte" | "refuse") {
-    setBusyId(id);
+  async function setStatus(p: Positionnement, status: "accepte" | "refuse") {
+    if (!canManage) {
+      setError("Tu n’es pas l’auteur de cette annonce.");
+      return;
+    }
+    setBusyId(p.id);
     setError(null);
     try {
-      const updated = await updatePositionnementStatus(id, status);
+      const updated =
+        status === "accepte"
+          ? await acceptPositionnementAsStudent(p, annonceId)
+          : await refusePositionnementAsStudent(p, annonceId);
       onUpdate(updated);
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? ((err.body.message as string) || "Action impossible.")
-          : "Action impossible.",
-      );
+      setError(formatActionError(err));
     } finally {
       setBusyId(null);
     }
@@ -109,12 +130,12 @@ export function AnnoncePositionnementsPanel({ positionnements, onUpdate }: Props
               ) : (
                 <p className="mt-4 text-sm italic text-[var(--muted)]">Aucun message joint.</p>
               )}
-              {pending ? (
+              {pending && canManage ? (
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     type="button"
                     disabled={busyId === p.id}
-                    onClick={() => setStatus(p.id, "accepte")}
+                    onClick={() => setStatus(p, "accepte")}
                     className="rounded-full bg-[var(--forest)] px-5 py-2 text-sm font-semibold text-[var(--card)] transition hover:brightness-110 disabled:opacity-60"
                   >
                     {busyId === p.id ? "…" : "Accepter"}
@@ -122,7 +143,7 @@ export function AnnoncePositionnementsPanel({ positionnements, onUpdate }: Props
                   <button
                     type="button"
                     disabled={busyId === p.id}
-                    onClick={() => setStatus(p.id, "refuse")}
+                    onClick={() => setStatus(p, "refuse")}
                     className="rounded-full border border-[var(--border-strong)] px-5 py-2 text-sm font-medium text-[var(--ink-soft)] transition hover:border-red-300 hover:text-red-700 disabled:opacity-60"
                   >
                     Refuser
