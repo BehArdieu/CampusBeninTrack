@@ -22,6 +22,19 @@ export async function listPositionnementsForAnnonce(
   return all.filter((p) => p.annonce_id === annonceId);
 }
 
+/** Positionnement de l'utilisateur diaspora connecté sur une annonce (source fiable). */
+export async function getMyPositionnementForAnnonce(
+  annonceId: number,
+  diasporaUserId: number,
+): Promise<Positionnement | null> {
+  const mine = await listPositionnements();
+  return (
+    mine.find(
+      (p) => p.annonce_id === annonceId && p.diaspora_id === diasporaUserId,
+    ) ?? null
+  );
+}
+
 export async function createPositionnement(
   annonceId: number,
   message?: string | null,
