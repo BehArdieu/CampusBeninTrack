@@ -6,11 +6,15 @@ import {
   acceptPositionnementAsStudent,
   refusePositionnementAsStudent,
 } from "@/lib/api/annonces";
-import { POSITIONNEMENT_STATUS_LABELS } from "@/lib/api/positionnements";
+import {
+  getAcceptedDiasporaId,
+  POSITIONNEMENT_STATUS_LABELS,
+} from "@/lib/api/positionnements";
 import type { Annonce, Positionnement, PositionnementStatus } from "@/lib/api/types";
 
 type Props = {
   annonceId: number;
+  annonce: Pick<Annonce, "diaspora_id">;
   positionnements: Positionnement[];
   canManage?: boolean;
   onUpdate: (updated: Positionnement) => void;
@@ -42,6 +46,7 @@ function formatActionError(err: unknown): string {
 
 export function AnnoncePositionnementsPanel({
   annonceId,
+  annonce,
   positionnements,
   canManage = true,
   onUpdate,
@@ -49,6 +54,7 @@ export function AnnoncePositionnementsPanel({
 }: Props) {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const acceptedDiasporaId = getAcceptedDiasporaId(annonce, positionnements);
 
   async function setStatus(p: Positionnement, status: "accepte" | "refuse") {
     if (!canManage) {
@@ -92,12 +98,19 @@ export function AnnoncePositionnementsPanel({
           {error}
         </p>
       ) : null}
+      {acceptedDiasporaId !== null && canManage ? (
+        <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          Tu as déjà retenu un accompagnant pour cette annonce. Tu ne peux pas en accepter un
+          second tant que ce choix est actif.
+        </p>
+      ) : null}
       <ul className="space-y-4">
         {positionnements.map((p) => {
           const name = p.diaspora
             ? `${p.diaspora.prenom} ${p.diaspora.nom}`.trim()
             : `Membre #${p.diaspora_id}`;
           const pending = p.status === "en_attente" || p.status === "lu";
+          const canAccept = pending && canManage && acceptedDiasporaId === null;
 
           return (
             <li
@@ -134,23 +147,33 @@ export function AnnoncePositionnementsPanel({
                 <p className="mt-4 text-sm italic text-[var(--muted)]">Aucun message joint.</p>
               )}
               {pending && canManage ? (
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    disabled={busyId === p.id}
-                    onClick={() => setStatus(p, "accepte")}
-                    className="rounded-full bg-[var(--forest)] px-5 py-2 text-sm font-semibold text-[var(--card)] transition hover:brightness-110 disabled:opacity-60"
-                  >
-                    {busyId === p.id ? "…" : "Accepter"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyId === p.id}
-                    onClick={() => setStatus(p, "refuse")}
-                    className="rounded-full border border-[var(--border-strong)] px-5 py-2 text-sm font-medium text-[var(--ink-soft)] transition hover:border-red-300 hover:text-red-700 disabled:opacity-60"
-                  >
-                    Refuser
-                  </button>
+                <div className="mt-5 space-y-3">
+                  {!canAccept && pending ? (
+                    <p className="text-sm text-[var(--muted)]">
+                      Un autre accompagnant est déjà retenu — tu peux seulement refuser cette
+                      proposition.
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-3">
+                    {canAccept ? (
+                      <button
+                        type="button"
+                        disabled={busyId === p.id}
+                        onClick={() => setStatus(p, "accepte")}
+                        className="rounded-full bg-[var(--forest)] px-5 py-2 text-sm font-semibold text-[var(--card)] transition hover:brightness-110 disabled:opacity-60"
+                      >
+                        {busyId === p.id ? "…" : "Accepter"}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={busyId === p.id}
+                      onClick={() => setStatus(p, "refuse")}
+                      className="rounded-full border border-[var(--border-strong)] px-5 py-2 text-sm font-medium text-[var(--ink-soft)] transition hover:border-red-300 hover:text-red-700 disabled:opacity-60"
+                    >
+                      Refuser
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </li>
