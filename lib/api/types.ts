@@ -57,7 +57,7 @@ export interface Positionnement {
   created_at: string;
   updated_at: string;
   diaspora?: { id: number; nom: string; prenom: string; photo: string | null };
-  annonce?: Pick<Annonce, "id" | "titre" | "ville" | "status">;
+  annonce?: Pick<Annonce, "id" | "titre" | "ville" | "status" | "diaspora_id">;
 }
 
 export interface Reponse {

@@ -1,5 +1,10 @@
 import { apiFetch, ApiError } from "./client";
-import type { PaginatedResponse, Positionnement, PositionnementStatus } from "./types";
+import type {
+  Annonce,
+  PaginatedResponse,
+  Positionnement,
+  PositionnementStatus,
+} from "./types";
 
 type PositionnementsIndexResponse =
   | Positionnement[]
@@ -67,6 +72,34 @@ export async function updatePositionnementStatus(
     }
     throw err;
   }
+}
+
+/**
+ * Le backend lie souvent l’acceptation via annonce.diaspora_id sans mettre à jour
+ * positionnement.status — on aligne l’affichage sur la source de vérité annonce.
+ */
+export function syncPositionnementsWithAnnonce(
+  annonce: Pick<Annonce, "diaspora_id">,
+  items: Positionnement[],
+): Positionnement[] {
+  const linked =
+    annonce.diaspora_id != null ? Number(annonce.diaspora_id) : null;
+
+  if (linked === null || Number.isNaN(linked)) return items;
+
+  return items.map((p) => {
+    if (Number(p.diaspora_id) !== linked) return p;
+    if (p.status === "accepte") return p;
+    return { ...p, status: "accepte" as const };
+  });
+}
+
+export function syncPositionnementWithAnnonce(
+  annonce: Pick<Annonce, "diaspora_id">,
+  item: Positionnement | null,
+): Positionnement | null {
+  if (!item) return null;
+  return syncPositionnementsWithAnnonce(annonce, [item])[0] ?? item;
 }
 
 export const POSITIONNEMENT_STATUS_LABELS: Record<PositionnementStatus, string> = {
