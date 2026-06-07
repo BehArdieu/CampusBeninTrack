@@ -119,6 +119,20 @@ export async function updatePositionnementStatus(
   }
 }
 
+/** PUT direct (évite PATCH 403 côté étudiant sur certains backends). */
+export async function persistPositionnementRefuse(
+  id: number,
+): Promise<Positionnement> {
+  return apiFetch<Positionnement>(`/positionnements/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ status: "refuse" }),
+  });
+}
+
+export async function deletePositionnement(id: number): Promise<void> {
+  await apiFetch(`/positionnements/${id}`, { method: "DELETE" });
+}
+
 /**
  * Le backend lie souvent l’acceptation via annonce.diaspora_id sans mettre à jour
  * positionnement.status — on aligne l’affichage sur la source de vérité annonce.
