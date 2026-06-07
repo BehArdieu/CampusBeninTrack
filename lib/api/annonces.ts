@@ -53,6 +53,18 @@ export async function acceptPositionnementAsStudent(
   positionnement: Positionnement,
   annonceId: number,
 ): Promise<AcceptPositionnementResult> {
+  const before = await apiFetch<Annonce>(`/annonces/${annonceId}`);
+
+  if (
+    before.diaspora_id != null &&
+    Number(before.diaspora_id) !== Number(positionnement.diaspora_id)
+  ) {
+    throw new ApiError(422, {
+      message:
+        "Tu as déjà accepté un accompagnant pour cette annonce. Refuse-le d’abord si tu souhaites en choisir un autre.",
+    });
+  }
+
   await updateAnnonceMerged(annonceId, {
     diaspora_id: positionnement.diaspora_id,
   });

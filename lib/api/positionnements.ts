@@ -147,6 +147,26 @@ export function syncPositionnementWithAnnonce(
   return syncPositionnementsWithAnnonce(annonce, [item])[0] ?? item;
 }
 
+/** Diaspora déjà retenue sur l’annonce (un seul accompagnant à la fois). */
+export function getAcceptedDiasporaId(
+  annonce: Pick<Annonce, "diaspora_id">,
+  positionnements: Positionnement[],
+): number | null {
+  if (annonce.diaspora_id != null) {
+    const id = Number(annonce.diaspora_id);
+    if (!Number.isNaN(id)) return id;
+  }
+  const accepted = positionnements.find((p) => p.status === "accepte");
+  return accepted ? Number(accepted.diaspora_id) : null;
+}
+
+export function hasAcceptedPositionnement(
+  annonce: Pick<Annonce, "diaspora_id">,
+  positionnements: Positionnement[],
+): boolean {
+  return getAcceptedDiasporaId(annonce, positionnements) !== null;
+}
+
 export const POSITIONNEMENT_STATUS_LABELS: Record<PositionnementStatus, string> = {
   en_attente: "En attente de réponse",
   lu: "Vu par l’étudiant",

@@ -209,6 +209,7 @@ export default function AnnonceDetailPage() {
           <div className="mt-10">
             <AnnoncePositionnementsPanel
               annonceId={annonce.id}
+              annonce={annonce}
               positionnements={positionnements}
               canManage={isOwner}
               onUpdate={handlePositionnementUpdated}
