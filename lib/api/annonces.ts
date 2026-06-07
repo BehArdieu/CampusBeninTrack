@@ -1,5 +1,9 @@
 import { apiFetch, ApiError } from "./client";
-import { syncPositionnementWithAnnonce } from "./positionnements";
+import {
+  deletePositionnement,
+  persistPositionnementRefuse,
+  syncPositionnementWithAnnonce,
+} from "./positionnements";
 import type { Annonce, Positionnement } from "./types";
 
 export type AcceptPositionnementResult = {
@@ -92,11 +96,35 @@ export async function refusePositionnementAsStudent(
     await updateAnnonceMerged(annonceId, { diaspora_id: null });
   }
 
+  let positionnementSynced: Positionnement;
+
+  try {
+    positionnementSynced = await persistPositionnementRefuse(positionnement.id);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 403) {
+      await deletePositionnement(positionnement.id);
+      positionnementSynced = { ...positionnement, status: "refuse" };
+    } else {
+      throw err;
+    }
+  }
+
   const verified = await apiFetch<Annonce>(`/annonces/${annonceId}`);
-  const positionnementSynced: Positionnement = {
-    ...positionnement,
-    status: "refuse",
-  };
+
+  const refreshed = await apiFetch<Positionnement>(
+    `/positionnements/${positionnement.id}`,
+  ).catch(() => null);
+
+  if (refreshed) {
+    if (refreshed.status === "refuse") {
+      positionnementSynced = refreshed;
+    } else {
+      throw new ApiError(422, {
+        message:
+          "Le refus n’a pas été enregistré sur le serveur. Réessaie ou contacte le support.",
+      });
+    }
+  }
 
   return { annonce: verified, positionnement: positionnementSynced };
 }
