@@ -11,6 +11,18 @@ export interface BackendUser {
   ville_id?: number | null;
 }
 
+/** Profil public affiché après mise en relation (email / téléphone). */
+export type PublicUserContact = Pick<
+  BackendUser,
+  "id" | "nom" | "prenom" | "email" | "telephone" | "photo"
+>;
+
+export type UserProfileEmbed = Pick<
+  BackendUser,
+  "id" | "nom" | "prenom" | "photo"
+> &
+  Partial<Pick<BackendUser, "email" | "telephone">>;
+
 export interface Ville {
   id: number;
   ville: string;
@@ -31,7 +43,8 @@ export interface Annonce {
   created_at: string;
   updated_at: string;
   ville?: Ville;
-  user?: { id: number; nom: string; prenom: string; photo: string | null };
+  user?: UserProfileEmbed;
+  diaspora?: PublicUserContact;
   positionnements_count?: number;
   reponses_count?: number;
   positionnements?: Positionnement[];
@@ -56,7 +69,7 @@ export interface Positionnement {
   read_at: string | null;
   created_at: string;
   updated_at: string;
-  diaspora?: { id: number; nom: string; prenom: string; photo: string | null };
+  diaspora?: UserProfileEmbed;
   annonce?: Pick<Annonce, "id" | "titre" | "ville" | "status" | "diaspora_id">;
 }
 

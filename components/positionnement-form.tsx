@@ -8,10 +8,11 @@ import {
   POSITIONNEMENT_STATUS_LABELS,
 } from "@/lib/api/positionnements";
 import type { Annonce, Positionnement, PositionnementStatus } from "@/lib/api/types";
+import { UserContactCard } from "@/components/user-contact-card";
 
 type Props = {
   annonceId: number;
-  annonce?: Pick<Annonce, "diaspora_id" | "positionnements"> | null;
+  annonce?: Pick<Annonce, "diaspora_id" | "positionnements" | "user_id" | "user"> | null;
   diasporaUserId?: number;
   existing?: Positionnement | null;
   onSuccess: (p: Positionnement) => void;
@@ -133,6 +134,16 @@ export function PositionnementForm({
           Statut : {POSITIONNEMENT_STATUS_LABELS[alreadyPositioned.status]}
         </p>
         <p className="mt-4 text-sm text-[var(--muted)]">{statusHint(alreadyPositioned.status)}</p>
+        {alreadyPositioned.status === "accepte" && annonce?.user_id ? (
+          <UserContactCard
+            className="mt-5"
+            title="Coordonnées de l’étudiant"
+            userId={annonce.user_id}
+            annonceId={annonceId}
+            embedded={annonce.user}
+            etudiant
+          />
+        ) : null}
       </div>
     );
   }

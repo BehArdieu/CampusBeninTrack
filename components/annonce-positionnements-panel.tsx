@@ -11,10 +11,11 @@ import {
   POSITIONNEMENT_STATUS_LABELS,
 } from "@/lib/api/positionnements";
 import type { Annonce, Positionnement, PositionnementStatus } from "@/lib/api/types";
+import { UserContactCard } from "@/components/user-contact-card";
 
 type Props = {
   annonceId: number;
-  annonce: Pick<Annonce, "diaspora_id">;
+  annonce: Pick<Annonce, "diaspora_id" | "diaspora">;
   positionnements: Positionnement[];
   canManage?: boolean;
   onUpdate: (updated: Positionnement) => void;
@@ -55,6 +56,12 @@ export function AnnoncePositionnementsPanel({
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const acceptedDiasporaId = getAcceptedDiasporaId(annonce, positionnements);
+  const acceptedPositionnement =
+    acceptedDiasporaId !== null
+      ? positionnements.find(
+          (p) => Number(p.diaspora_id) === acceptedDiasporaId,
+        )
+      : undefined;
 
   async function setStatus(p: Positionnement, status: "accepte" | "refuse") {
     if (!canManage) {
@@ -99,10 +106,19 @@ export function AnnoncePositionnementsPanel({
         </p>
       ) : null}
       {acceptedDiasporaId !== null && canManage ? (
-        <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          Tu as déjà retenu un accompagnant pour cette annonce. Tu ne peux pas en accepter un
-          second tant que ce choix est actif.
-        </p>
+        <>
+          <UserContactCard
+            title="Coordonnées de ton accompagnant"
+            userId={acceptedDiasporaId}
+            annonceId={annonceId}
+            positionnementId={acceptedPositionnement?.id}
+            embedded={acceptedPositionnement?.diaspora ?? annonce.diaspora}
+          />
+          <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+            Tu as déjà retenu un accompagnant pour cette annonce. Tu ne peux pas en accepter un
+            second tant que ce choix est actif.
+          </p>
+        </>
       ) : null}
       <ul className="space-y-4">
         {positionnements.map((p) => {
