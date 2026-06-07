@@ -59,14 +59,54 @@ export function PositionnementForm({
 }: Props) {
   const [message, setMessage] = useState(existing?.message ?? "");
   const [submitting, setSubmitting] = useState(false);
+  const [checking, setChecking] = useState(!existing);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<Positionnement | null>(existing ?? null);
 
   useEffect(() => {
-    if (existing) setConfirmed(existing);
+    if (existing) {
+      setConfirmed(existing);
+      setChecking(false);
+    }
   }, [existing]);
 
+  useEffect(() => {
+    if (existing || !diasporaUserId) {
+      setChecking(false);
+      return;
+    }
+
+    let cancelled = false;
+    setChecking(true);
+
+    getMyPositionnementForAnnonce(annonceId, diasporaUserId, annonce ?? null)
+      .then((found) => {
+        if (!cancelled && found) setConfirmed(found);
+      })
+      .finally(() => {
+        if (!cancelled) setChecking(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [annonceId, diasporaUserId, annonce, existing]);
+
   const alreadyPositioned = confirmed;
+
+  if (checking) {
+    return (
+      <div
+        className="animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6"
+        aria-busy="true"
+        aria-label="Vérification de ton positionnement"
+      >
+        <div className="h-6 w-2/3 rounded bg-[var(--surface)]" />
+        <div className="mt-4 h-4 w-full rounded bg-[var(--surface)]" />
+        <div className="mt-2 h-4 w-4/5 rounded bg-[var(--surface)]" />
+      </div>
+    );
+  }
 
   if (alreadyPositioned) {
     return (
@@ -167,7 +207,7 @@ export function PositionnementForm({
       ) : null}
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || !!confirmed}
         className="mt-5 inline-flex rounded-full bg-[var(--forest)] px-6 py-3 text-sm font-semibold text-[var(--card)] transition hover:brightness-110 disabled:opacity-60"
       >
         {submitting ? "Envoi…" : "Envoyer ma candidature"}

@@ -72,7 +72,20 @@ function unwrapList(res: PositionnementsIndexResponse): Positionnement[] {
 
 export async function listPositionnements(): Promise<Positionnement[]> {
   const res = await apiFetch<PositionnementsIndexResponse>("/positionnements");
-  return unwrapList(res);
+  if (Array.isArray(res)) return res;
+
+  const first = res.data ?? [];
+  const lastPage = res.last_page ?? 1;
+  if (lastPage <= 1) return first;
+
+  const rest: Positionnement[] = [];
+  for (let page = 2; page <= lastPage; page++) {
+    const next = await apiFetch<PaginatedResponse<Positionnement>>(
+      `/positionnements?page=${page}`,
+    );
+    rest.push(...(next.data ?? []));
+  }
+  return [...first, ...rest];
 }
 
 export async function listPositionnementsForAnnonce(
@@ -96,26 +109,70 @@ function findMyPositionnementInList(
   );
 }
 
+function positionnementFromAnnonceLink(
+  annonceId: number,
+  diasporaUserId: number,
+  annonceHint: Pick<Annonce, "diaspora_id" | "positionnements">,
+): Positionnement | null {
+  if (
+    annonceHint.diaspora_id == null ||
+    Number(annonceHint.diaspora_id) !== Number(diasporaUserId)
+  ) {
+    return null;
+  }
+
+  const embedded = annonceHint.positionnements?.length
+    ? findMyPositionnementInList(
+        annonceHint.positionnements,
+        annonceId,
+        diasporaUserId,
+      )
+    : null;
+
+  if (embedded) return syncPositionnementWithAnnonce(annonceHint, embedded);
+
+  return syncPositionnementWithAnnonce(annonceHint, {
+    id: 0,
+    annonce_id: annonceId,
+    diaspora_id: diasporaUserId,
+    message: null,
+    status: "en_attente",
+    read_at: null,
+    created_at: "",
+    updated_at: "",
+  });
+}
+
 /** Positionnement diaspora sur une annonce, synchronisé avec annonce.diaspora_id. */
 export async function getMyPositionnementForAnnonce(
   annonceId: number,
   diasporaUserId: number,
   annonceHint?: Pick<Annonce, "diaspora_id" | "positionnements"> | null,
 ): Promise<Positionnement | null> {
-  const mine = await listPositionnements();
-  let found = findMyPositionnementInList(mine, annonceId, diasporaUserId);
-
-  if (!found && annonceHint?.positionnements?.length) {
-    found = findMyPositionnementInList(
+  if (annonceHint?.positionnements?.length) {
+    const fromEmbed = findMyPositionnementInList(
       annonceHint.positionnements,
       annonceId,
       diasporaUserId,
     );
+    if (fromEmbed) {
+      return syncPositionnementWithAnnonce(annonceHint, fromEmbed);
+    }
   }
 
-  if (!found || !annonceHint) return found;
+  const mine = await listPositionnements();
+  const fromList = findMyPositionnementInList(mine, annonceId, diasporaUserId);
+  if (fromList) {
+    return annonceHint
+      ? syncPositionnementWithAnnonce(annonceHint, fromList)
+      : fromList;
+  }
 
-  return syncPositionnementWithAnnonce(annonceHint, found);
+  if (annonceHint) {
+    return positionnementFromAnnonceLink(annonceId, diasporaUserId, annonceHint);
+  }
+
+  return null;
 }
 
 /** Recharge les statuts des positionnements diaspora via les annonces liées. */
