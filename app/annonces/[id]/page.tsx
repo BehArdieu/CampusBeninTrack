@@ -57,9 +57,9 @@ export default function AnnonceDetailPage() {
           setPositionnements(syncPositionnementsWithAnnonce(data, raw));
           setMyPositionnement(null);
         } else if (isDiasporaRole(user.role)) {
-          const mine = await getMyPositionnementForAnnonce(annonceId, user.id);
+          const mine = await getMyPositionnementForAnnonce(annonceId, user.id, data);
           if (cancelled) return;
-          setMyPositionnement(syncPositionnementWithAnnonce(data, mine));
+          setMyPositionnement(mine);
           setPositionnements([]);
         } else {
           setPositionnements([]);
@@ -221,6 +221,8 @@ export default function AnnonceDetailPage() {
           <div className="mt-10">
             <PositionnementForm
               annonceId={annonce.id}
+              annonce={annonce}
+              diasporaUserId={backendUser?.id}
               existing={myPositionnement}
               onSuccess={handlePositionnementCreated}
             />
