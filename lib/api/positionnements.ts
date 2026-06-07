@@ -8,6 +8,8 @@ import type {
 } from "./types";
 
 const REFUSED_POSITIONNEMENTS_PREFIX = "360cf-refused-positionnements";
+const GLOBAL_REFUSALS_KEY = "360cf-positionnement-refusals-global";
+const DIASPORA_WAS_LINKED_KEY = "360cf-diaspora-was-linked";
 
 type RefusedPositionnementEntry = {
   id: number;
@@ -41,17 +43,64 @@ function writeRefusedPositionnements(entries: RefusedPositionnementEntry[]) {
   );
 }
 
+function readGlobalRefusals(): RefusedPositionnementEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(GLOBAL_REFUSALS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as RefusedPositionnementEntry[];
+  } catch {
+    return [];
+  }
+}
+
+function writeGlobalRefusals(entries: RefusedPositionnementEntry[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(GLOBAL_REFUSALS_KEY, JSON.stringify(entries));
+}
+
+function readWasLinkedIds(): Set<number> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(DIASPORA_WAS_LINKED_KEY);
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw) as number[]);
+  } catch {
+    return new Set();
+  }
+}
+
+function noteDiasporaWasLinked(positionnementId: number) {
+  if (typeof window === "undefined" || positionnementId <= 0) return;
+  const ids = readWasLinkedIds();
+  ids.add(positionnementId);
+  window.localStorage.setItem(DIASPORA_WAS_LINKED_KEY, JSON.stringify([...ids]));
+}
+
+function isGloballyRefused(positionnementId: number, diasporaId: number): boolean {
+  return readGlobalRefusals().some(
+    (e) => e.id === positionnementId && Number(e.diasporaId) === Number(diasporaId),
+  );
+}
+
 /** Refus enregistré localement (le backend n’autorise pas PUT /positionnements côté étudiant). */
 export function markPositionnementRefusedLocally(entry: RefusedPositionnementEntry) {
   const entries = readRefusedPositionnements().filter((e) => e.id !== entry.id);
   entries.push(entry);
   writeRefusedPositionnements(entries);
+
+  const global = readGlobalRefusals().filter((e) => e.id !== entry.id);
+  global.push(entry);
+  writeGlobalRefusals(global);
 }
 
 export function applyLocallyRefusedPositionnements(
   items: Positionnement[],
 ): Positionnement[] {
-  const refusedIds = new Set(readRefusedPositionnements().map((e) => e.id));
+  const refusedIds = new Set([
+    ...readRefusedPositionnements().map((e) => e.id),
+    ...readGlobalRefusals().map((e) => e.id),
+  ]);
   if (refusedIds.size === 0) return items;
 
   return items.map((p) =>
@@ -59,6 +108,50 @@ export function applyLocallyRefusedPositionnements(
       ? { ...p, status: "refuse" as const }
       : p,
   );
+}
+
+type ResolveStatusOptions = {
+  cloudRefusedIds?: Set<number>;
+};
+
+/** Statut affiché pour la diaspora (acceptation via diaspora_id, refus inféré ou synchronisé). */
+export function resolvePositionnementStatus(
+  annonce: Pick<Annonce, "diaspora_id">,
+  p: Positionnement,
+  options?: ResolveStatusOptions,
+): Positionnement {
+  if (p.status === "refuse") return p;
+
+  const myId = Number(p.diaspora_id);
+  const linked =
+    annonce.diaspora_id != null ? Number(annonce.diaspora_id) : null;
+
+  if (
+    options?.cloudRefusedIds?.has(p.id) ||
+    isGloballyRefused(p.id, myId)
+  ) {
+    return { ...p, status: "refuse" };
+  }
+
+  if (linked !== null && !Number.isNaN(linked)) {
+    if (linked === myId) {
+      noteDiasporaWasLinked(p.id);
+      if (p.status !== "accepte") return { ...p, status: "accepte" };
+      return p;
+    }
+    if (p.status === "en_attente" || p.status === "lu") {
+      return { ...p, status: "refuse" };
+    }
+  }
+
+  if (
+    (linked === null || Number.isNaN(linked)) &&
+    readWasLinkedIds().has(p.id)
+  ) {
+    return { ...p, status: "refuse" };
+  }
+
+  return p;
 }
 
 type PositionnementsIndexResponse =
@@ -129,9 +222,11 @@ function positionnementFromAnnonceLink(
       )
     : null;
 
-  if (embedded) return syncPositionnementWithAnnonce(annonceHint, embedded);
+  if (embedded) {
+    return resolvePositionnementStatus(annonceHint, embedded);
+  }
 
-  return syncPositionnementWithAnnonce(annonceHint, {
+  return resolvePositionnementStatus(annonceHint, {
     id: 0,
     annonce_id: annonceId,
     diaspora_id: diasporaUserId,
@@ -149,6 +244,13 @@ export async function getMyPositionnementForAnnonce(
   diasporaUserId: number,
   annonceHint?: Pick<Annonce, "diaspora_id" | "positionnements"> | null,
 ): Promise<Positionnement | null> {
+  const { fetchRefusedPositionnementIdsForDiaspora } = await import(
+    "@/lib/positionnement-refusals"
+  );
+  const syncOpts: ResolveStatusOptions = {
+    cloudRefusedIds: await fetchRefusedPositionnementIdsForDiaspora(diasporaUserId),
+  };
+
   if (annonceHint?.positionnements?.length) {
     const fromEmbed = findMyPositionnementInList(
       annonceHint.positionnements,
@@ -156,7 +258,7 @@ export async function getMyPositionnementForAnnonce(
       diasporaUserId,
     );
     if (fromEmbed) {
-      return syncPositionnementWithAnnonce(annonceHint, fromEmbed);
+      return syncPositionnementWithAnnonce(annonceHint, fromEmbed, syncOpts);
     }
   }
 
@@ -164,12 +266,22 @@ export async function getMyPositionnementForAnnonce(
   const fromList = findMyPositionnementInList(mine, annonceId, diasporaUserId);
   if (fromList) {
     return annonceHint
-      ? syncPositionnementWithAnnonce(annonceHint, fromList)
-      : fromList;
+      ? syncPositionnementWithAnnonce(annonceHint, fromList, syncOpts)
+      : resolvePositionnementStatus(
+          annonceHint ?? { diaspora_id: null },
+          fromList,
+          syncOpts,
+        );
   }
 
   if (annonceHint) {
-    return positionnementFromAnnonceLink(annonceId, diasporaUserId, annonceHint);
+    const linked = positionnementFromAnnonceLink(
+      annonceId,
+      diasporaUserId,
+      annonceHint,
+    );
+    if (!linked) return null;
+    return syncPositionnementWithAnnonce(annonceHint, linked, syncOpts);
   }
 
   return null;
@@ -178,8 +290,17 @@ export async function getMyPositionnementForAnnonce(
 /** Recharge les statuts des positionnements diaspora via les annonces liées. */
 export async function enrichPositionnementsWithAnnonces(
   items: Positionnement[],
+  diasporaBackendId?: number,
 ): Promise<Positionnement[]> {
   if (items.length === 0) return items;
+
+  const { fetchRefusedPositionnementIdsForDiaspora } = await import(
+    "@/lib/positionnement-refusals"
+  );
+  const cloudRefusedIds =
+    diasporaBackendId != null
+      ? await fetchRefusedPositionnementIdsForDiaspora(diasporaBackendId)
+      : new Set<number>();
 
   const ids = [...new Set(items.map((p) => p.annonce_id))];
   const annonces = await Promise.all(
@@ -193,7 +314,12 @@ export async function enrichPositionnementsWithAnnonces(
     const annonce = byId.get(p.annonce_id) ?? p.annonce;
     if (!annonce) return p;
     const full = byId.get(p.annonce_id) ?? annonce;
-    return syncPositionnementWithAnnonce(full, { ...p, annonce: full }) ?? p;
+    const resolved = resolvePositionnementStatus(
+      full,
+      { ...p, annonce: full },
+      { cloudRefusedIds },
+    );
+    return applyLocallyRefusedPositionnements([resolved])[0] ?? resolved;
   });
 }
 
@@ -238,28 +364,21 @@ export async function updatePositionnementStatus(
 export function syncPositionnementsWithAnnonce(
   annonce: Pick<Annonce, "diaspora_id">,
   items: Positionnement[],
+  options?: ResolveStatusOptions,
 ): Positionnement[] {
-  const linked =
-    annonce.diaspora_id != null ? Number(annonce.diaspora_id) : null;
-
-  const synced =
-    linked === null || Number.isNaN(linked)
-      ? items
-      : items.map((p) => {
-          if (Number(p.diaspora_id) !== linked) return p;
-          if (p.status === "accepte") return p;
-          return { ...p, status: "accepte" as const };
-        });
-
-  return applyLocallyRefusedPositionnements(synced);
+  const resolved = items.map((p) =>
+    resolvePositionnementStatus(annonce, p, options),
+  );
+  return applyLocallyRefusedPositionnements(resolved);
 }
 
 export function syncPositionnementWithAnnonce(
   annonce: Pick<Annonce, "diaspora_id">,
   item: Positionnement | null,
+  options?: ResolveStatusOptions,
 ): Positionnement | null {
   if (!item) return null;
-  return syncPositionnementsWithAnnonce(annonce, [item])[0] ?? item;
+  return syncPositionnementsWithAnnonce(annonce, [item], options)[0] ?? item;
 }
 
 /** Diaspora déjà retenue sur l’annonce (un seul accompagnant à la fois). */

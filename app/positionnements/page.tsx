@@ -42,11 +42,13 @@ export default function MesPositionnementsPage() {
 
     setLoading(true);
     listPositionnements()
-      .then(enrichPositionnementsWithAnnonces)
+      .then((list) =>
+        enrichPositionnementsWithAnnonces(list, backendUser?.id),
+      )
       .then(setItems)
       .catch(() => setError("Impossible de charger tes positionnements."))
       .finally(() => setLoading(false));
-  }, [ready, backendToken, isDiaspora]);
+  }, [ready, backendToken, isDiaspora, backendUser?.id]);
 
   if (!ready || loading) {
     return (
