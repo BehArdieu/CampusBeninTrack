@@ -6,9 +6,9 @@ import { useBackendAuth } from "@/hooks/use-backend-auth";
 import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
 import { apiFetch } from "@/lib/api/client";
 import {
+  enrichPositionnementsWithAnnonces,
   listPositionnements,
   POSITIONNEMENT_STATUS_LABELS,
-  syncPositionnementWithAnnonce,
 } from "@/lib/api/positionnements";
 import type { Annonce, PaginatedResponse, PositionnementStatus } from "@/lib/api/types";
 
@@ -33,11 +33,13 @@ function AnnonceCard({
             <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
               {POSITIONNEMENT_STATUS_LABELS.accepte}
             </span>
+          ) : myStatus === "refuse" ? (
+            <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+              {POSITIONNEMENT_STATUS_LABELS.refuse}
+            </span>
           ) : myStatus ? (
             <span className="rounded-full bg-[var(--forest)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--forest)]">
-              {myStatus === "refuse"
-                ? POSITIONNEMENT_STATUS_LABELS.refuse
-                : "Déjà positionné"}
+              Déjà positionné
             </span>
           ) : null}
           <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
@@ -120,13 +122,13 @@ export default function AnnoncesPage() {
 
         if (isDiaspora && backendUser) {
           const list = await listPositionnements();
+          const enriched = await enrichPositionnementsWithAnnonces(
+            list,
+            backendUser.id,
+          );
           const statusMap = new Map<number, PositionnementStatus>();
-          for (const p of list) {
-            const annonce = res.data.find((a) => a.id === p.annonce_id);
-            const synced = annonce
-              ? syncPositionnementWithAnnonce(annonce, p)
-              : p;
-            if (synced) statusMap.set(p.annonce_id, synced.status);
+          for (const p of enriched) {
+            statusMap.set(p.annonce_id, p.status);
           }
           setMyStatusByAnnonce(statusMap);
         } else {

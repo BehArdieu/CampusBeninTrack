@@ -99,10 +99,20 @@ export async function refusePositionnementAsStudent(
     await updateAnnonceMerged(annonceId, { diaspora_id: null });
   }
 
-  markPositionnementRefusedLocally({
+  const refusal = {
     id: positionnement.id,
     annonceId,
     diasporaId: positionnement.diaspora_id,
+  };
+  markPositionnementRefusedLocally(refusal);
+
+  const { syncPositionnementRefusalToCloud } = await import(
+    "@/lib/positionnement-refusals"
+  );
+  await syncPositionnementRefusalToCloud({
+    positionnement_id: refusal.id,
+    annonce_id: refusal.annonceId,
+    diaspora_backend_id: refusal.diasporaId,
   });
 
   const verified = await apiFetch<Annonce>(`/annonces/${annonceId}`);
