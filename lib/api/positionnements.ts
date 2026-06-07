@@ -27,17 +27,62 @@ export async function listPositionnementsForAnnonce(
   return all.filter((p) => p.annonce_id === annonceId);
 }
 
-/** Positionnement de l'utilisateur diaspora connecté sur une annonce (source fiable). */
+function findMyPositionnementInList(
+  items: Positionnement[],
+  annonceId: number,
+  diasporaUserId: number,
+): Positionnement | null {
+  return (
+    items.find(
+      (p) =>
+        p.annonce_id === annonceId &&
+        Number(p.diaspora_id) === Number(diasporaUserId),
+    ) ?? null
+  );
+}
+
+/** Positionnement diaspora sur une annonce, synchronisé avec annonce.diaspora_id. */
 export async function getMyPositionnementForAnnonce(
   annonceId: number,
   diasporaUserId: number,
+  annonceHint?: Pick<Annonce, "diaspora_id" | "positionnements"> | null,
 ): Promise<Positionnement | null> {
   const mine = await listPositionnements();
-  return (
-    mine.find(
-      (p) => p.annonce_id === annonceId && p.diaspora_id === diasporaUserId,
-    ) ?? null
+  let found = findMyPositionnementInList(mine, annonceId, diasporaUserId);
+
+  if (!found && annonceHint?.positionnements?.length) {
+    found = findMyPositionnementInList(
+      annonceHint.positionnements,
+      annonceId,
+      diasporaUserId,
+    );
+  }
+
+  if (!found || !annonceHint) return found;
+
+  return syncPositionnementWithAnnonce(annonceHint, found);
+}
+
+/** Recharge les statuts des positionnements diaspora via les annonces liées. */
+export async function enrichPositionnementsWithAnnonces(
+  items: Positionnement[],
+): Promise<Positionnement[]> {
+  if (items.length === 0) return items;
+
+  const ids = [...new Set(items.map((p) => p.annonce_id))];
+  const annonces = await Promise.all(
+    ids.map((id) => apiFetch<Annonce>(`/annonces/${id}`).catch(() => null)),
   );
+  const byId = new Map(
+    annonces.filter((a): a is Annonce => a != null).map((a) => [a.id, a]),
+  );
+
+  return items.map((p) => {
+    const annonce = byId.get(p.annonce_id) ?? p.annonce;
+    if (!annonce) return p;
+    const full = byId.get(p.annonce_id) ?? annonce;
+    return syncPositionnementWithAnnonce(full, { ...p, annonce: full }) ?? p;
+  });
 }
 
 export async function createPositionnement(

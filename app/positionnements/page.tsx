@@ -5,11 +5,26 @@ import Link from "next/link";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
 import { isDiasporaRole } from "@/lib/api/user";
 import {
+  enrichPositionnementsWithAnnonces,
   listPositionnements,
   POSITIONNEMENT_STATUS_LABELS,
-  syncPositionnementWithAnnonce,
 } from "@/lib/api/positionnements";
-import type { Positionnement } from "@/lib/api/types";
+import type { Positionnement, PositionnementStatus } from "@/lib/api/types";
+
+function StatusBadge({ status }: { status: PositionnementStatus }) {
+  const label = POSITIONNEMENT_STATUS_LABELS[status];
+  const className =
+    status === "accepte"
+      ? "bg-green-100 text-green-800"
+      : status === "refuse"
+        ? "bg-red-100 text-red-700"
+        : "bg-[var(--accent-soft)] text-[var(--accent)]";
+  return (
+    <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}>
+      {label}
+    </span>
+  );
+}
 
 export default function MesPositionnementsPage() {
   const { backendToken, backendUser, ready } = useBackendAuth();
@@ -27,15 +42,8 @@ export default function MesPositionnementsPage() {
 
     setLoading(true);
     listPositionnements()
-      .then((list) =>
-        setItems(
-          list.map((p) =>
-            p.annonce
-              ? syncPositionnementWithAnnonce(p.annonce, p) ?? p
-              : p,
-          ),
-        ),
-      )
+      .then(enrichPositionnementsWithAnnonces)
+      .then(setItems)
       .catch(() => setError("Impossible de charger tes positionnements."))
       .finally(() => setLoading(false));
   }, [ready, backendToken, isDiaspora]);
@@ -111,9 +119,7 @@ export default function MesPositionnementsPage() {
                     <h2 className="font-display text-lg font-semibold text-[var(--ink)]">
                       {p.annonce?.titre ?? `Annonce #${p.annonce_id}`}
                     </h2>
-                    <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
-                      {POSITIONNEMENT_STATUS_LABELS[p.status]}
-                    </span>
+                    <StatusBadge status={p.status} />
                   </div>
                   {p.annonce?.ville ? (
                     <p className="mt-2 text-sm text-[var(--muted)]">📍 {p.annonce.ville.ville}</p>

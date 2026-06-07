@@ -5,15 +5,19 @@ import { useEffect, useState } from "react";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
 import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
 import { apiFetch } from "@/lib/api/client";
-import { listPositionnements } from "@/lib/api/positionnements";
-import type { Annonce, PaginatedResponse } from "@/lib/api/types";
+import {
+  listPositionnements,
+  POSITIONNEMENT_STATUS_LABELS,
+  syncPositionnementWithAnnonce,
+} from "@/lib/api/positionnements";
+import type { Annonce, PaginatedResponse, PositionnementStatus } from "@/lib/api/types";
 
 function AnnonceCard({
   annonce,
-  alreadyPositioned,
+  myStatus,
 }: {
   annonce: Annonce;
-  alreadyPositioned?: boolean;
+  myStatus?: PositionnementStatus | null;
 }) {
   return (
     <Link
@@ -25,9 +29,15 @@ function AnnonceCard({
           {annonce.titre}
         </h3>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          {alreadyPositioned ? (
+          {myStatus === "accepte" ? (
+            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+              {POSITIONNEMENT_STATUS_LABELS.accepte}
+            </span>
+          ) : myStatus ? (
             <span className="rounded-full bg-[var(--forest)]/15 px-2.5 py-0.5 text-xs font-medium text-[var(--forest)]">
-              Déjà positionné
+              {myStatus === "refuse"
+                ? POSITIONNEMENT_STATUS_LABELS.refuse
+                : "Déjà positionné"}
             </span>
           ) : null}
           <span className="rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--accent)]">
@@ -90,7 +100,9 @@ export default function AnnoncesPage() {
   const isDiaspora = isDiasporaRole(backendUser?.role);
   const isEtudiant = isEtudiantRole(backendUser?.role);
   const [annonces, setAnnonces] = useState<Annonce[]>([]);
-  const [positionedIds, setPositionedIds] = useState<Set<number>>(new Set());
+  const [myStatusByAnnonce, setMyStatusByAnnonce] = useState<
+    Map<number, PositionnementStatus>
+  >(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,25 +114,25 @@ export default function AnnoncesPage() {
     }
 
     setLoading(true);
-    const loads: [
-      Promise<PaginatedResponse<Annonce>>,
-      Promise<Set<number>>?,
-    ] = [
-      apiFetch<PaginatedResponse<Annonce>>("/annonces"),
-      isDiaspora && backendUser
-        ? listPositionnements().then(
-            (list) => new Set(list.map((p) => p.annonce_id)),
-          )
-        : undefined,
-    ];
-
-    Promise.all([
-      loads[0],
-      loads[1] ?? Promise.resolve(new Set<number>()),
-    ])
-      .then(([res, ids]) => {
+    apiFetch<PaginatedResponse<Annonce>>("/annonces")
+      .then(async (res) => {
         setAnnonces(res.data);
-        setPositionedIds(ids);
+
+        if (isDiaspora && backendUser) {
+          const list = await listPositionnements();
+          const statusMap = new Map<number, PositionnementStatus>();
+          for (const p of list) {
+            const annonce = res.data.find((a) => a.id === p.annonce_id);
+            const synced = annonce
+              ? syncPositionnementWithAnnonce(annonce, p)
+              : p;
+            if (synced) statusMap.set(p.annonce_id, synced.status);
+          }
+          setMyStatusByAnnonce(statusMap);
+        } else {
+          setMyStatusByAnnonce(new Map());
+        }
+
         setError(null);
       })
       .catch((err) => {
@@ -206,7 +218,7 @@ export default function AnnoncesPage() {
               <AnnonceCard
                 key={a.id}
                 annonce={a}
-                alreadyPositioned={positionedIds.has(a.id)}
+                myStatus={myStatusByAnnonce.get(a.id) ?? null}
               />
             ))}
           </div>

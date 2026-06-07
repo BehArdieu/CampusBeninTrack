@@ -2,16 +2,61 @@
 
 import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api/client";
-import { createPositionnement, POSITIONNEMENT_STATUS_LABELS } from "@/lib/api/positionnements";
-import type { Positionnement } from "@/lib/api/types";
+import {
+  createPositionnement,
+  getMyPositionnementForAnnonce,
+  POSITIONNEMENT_STATUS_LABELS,
+} from "@/lib/api/positionnements";
+import type { Annonce, Positionnement, PositionnementStatus } from "@/lib/api/types";
 
 type Props = {
   annonceId: number;
+  annonce?: Pick<Annonce, "diaspora_id" | "positionnements"> | null;
+  diasporaUserId?: number;
   existing?: Positionnement | null;
   onSuccess: (p: Positionnement) => void;
 };
 
-export function PositionnementForm({ annonceId, existing, onSuccess }: Props) {
+function statusPanelClass(status: PositionnementStatus): string {
+  switch (status) {
+    case "accepte":
+      return "border-green-300/60 bg-green-50";
+    case "refuse":
+      return "border-red-200 bg-red-50/80";
+    default:
+      return "border-[var(--forest)]/30 bg-[var(--forest)]/5";
+  }
+}
+
+function statusTitle(status: PositionnementStatus): string {
+  switch (status) {
+    case "accepte":
+      return "Ta proposition a été acceptée";
+    case "refuse":
+      return "Ta proposition a été refusée";
+    default:
+      return "Tu t’es déjà positionné sur cette annonce";
+  }
+}
+
+function statusHint(status: PositionnementStatus): string {
+  switch (status) {
+    case "accepte":
+      return "L’étudiant t’a choisi pour l’accompagner. Tu peux le contacter pour la suite du parcours logement.";
+    case "refuse":
+      return "L’étudiant a choisi un autre accompagnement ou a décliné ta proposition.";
+    default:
+      return "Un seul positionnement par annonce est possible. L’étudiant peut accepter ou refuser ta proposition.";
+  }
+}
+
+export function PositionnementForm({
+  annonceId,
+  annonce,
+  diasporaUserId,
+  existing,
+  onSuccess,
+}: Props) {
   const [message, setMessage] = useState(existing?.message ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,22 +70,29 @@ export function PositionnementForm({ annonceId, existing, onSuccess }: Props) {
 
   if (alreadyPositioned) {
     return (
-      <div className="rounded-2xl border border-[var(--forest)]/30 bg-[var(--forest)]/5 p-6">
-        <p className="font-display text-lg font-semibold text-[var(--forest)]">
-          Tu t’es déjà positionné sur cette annonce
+      <div
+        className={`rounded-2xl border p-6 ${statusPanelClass(alreadyPositioned.status)}`}
+      >
+        <p
+          className={`font-display text-lg font-semibold ${
+            alreadyPositioned.status === "accepte"
+              ? "text-green-800"
+              : alreadyPositioned.status === "refuse"
+                ? "text-red-800"
+                : "text-[var(--forest)]"
+          }`}
+        >
+          {statusTitle(alreadyPositioned.status)}
         </p>
         {alreadyPositioned.message ? (
-          <p className="mt-3 text-sm text-[var(--ink-soft)] whitespace-pre-wrap">
+          <p className="mt-3 whitespace-pre-wrap text-sm text-[var(--ink-soft)]">
             {alreadyPositioned.message}
           </p>
         ) : null}
         <p className="mt-3 text-sm font-medium text-[var(--ink-soft)]">
           Statut : {POSITIONNEMENT_STATUS_LABELS[alreadyPositioned.status]}
         </p>
-        <p className="mt-4 text-sm text-[var(--muted)]">
-          Un seul positionnement par annonce est possible. L’étudiant peut accepter ou refuser ta
-          proposition.
-        </p>
+        <p className="mt-4 text-sm text-[var(--muted)]">{statusHint(alreadyPositioned.status)}</p>
       </div>
     );
   }
@@ -59,7 +111,20 @@ export function PositionnementForm({ annonceId, existing, onSuccess }: Props) {
         const errors = err.body.errors as Record<string, string[]> | undefined;
         const first = errors && Object.values(errors)[0]?.[0];
         const msg = (err.body.message as string) || "";
-        if (err.status === 422 && /déjà|deja|already|unique|exist/i.test(msg + (first ?? ""))) {
+        const isDuplicate =
+          err.status === 422 && /déjà|deja|already|unique|exist/i.test(msg + (first ?? ""));
+
+        if (isDuplicate && diasporaUserId) {
+          const again = await getMyPositionnementForAnnonce(
+            annonceId,
+            diasporaUserId,
+            annonce,
+          );
+          if (again) {
+            setConfirmed(again);
+            onSuccess(again);
+            return;
+          }
           setError("Tu es déjà positionné sur cette annonce.");
         } else {
           setError(first || msg || "Impossible de t’enregistrer sur cette annonce.");
