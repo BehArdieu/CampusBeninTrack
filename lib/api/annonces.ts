@@ -1,5 +1,5 @@
-import { apiFetch, ApiError } from "./client";
-import type { Annonce, Positionnement, PositionnementStatus } from "./types";
+import { apiFetch } from "./client";
+import type { Annonce, Positionnement } from "./types";
 
 export async function updateAnnonce(
   annonceId: number,
@@ -17,62 +17,41 @@ export async function updateAnnonce(
   });
 }
 
-async function patchPositionnementStatus(
-  id: number,
-  status: PositionnementStatus,
-): Promise<Positionnement> {
-  const body = JSON.stringify({ status });
-  try {
-    return await apiFetch<Positionnement>(`/positionnements/${id}`, {
-      method: "PATCH",
-      body,
-    });
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 405) {
-      return apiFetch<Positionnement>(`/positionnements/${id}`, { method: "PUT", body });
-    }
-    throw err;
-  }
+/** Corps PUT complet (certains backends Laravel exigent tous les champs modifiables). */
+async function updateAnnonceMerged(
+  annonceId: number,
+  patch: Partial<{ diaspora_id: number | null; status: string }>,
+): Promise<Annonce> {
+  const current = await apiFetch<Annonce>(`/annonces/${annonceId}`);
+  return updateAnnonce(annonceId, {
+    titre: current.titre,
+    description: current.description,
+    universite: current.universite,
+    ...patch,
+  });
 }
 
 /**
- * Acceptation côté étudiant : met à jour le positionnement, ou à défaut lie la diaspora à l’annonce
- * (certains backends n’autorisent l’acceptation que via PUT /annonces/{id}).
+ * Acceptation côté étudiant via PUT /annonces/{id} + diaspora_id.
+ * Le backend refuse en général PATCH/PUT sur /positionnements pour l’étudiant.
  */
 export async function acceptPositionnementAsStudent(
   positionnement: Positionnement,
   annonceId: number,
 ): Promise<Positionnement> {
-  try {
-    return await patchPositionnementStatus(positionnement.id, "accepte");
-  } catch (err) {
-    if (!(err instanceof ApiError) || err.status !== 403) throw err;
-  }
-
-  await updateAnnonce(annonceId, { diaspora_id: positionnement.diaspora_id });
-
-  try {
-    return await apiFetch<Positionnement>(`/positionnements/${positionnement.id}`);
-  } catch {
-    return { ...positionnement, status: "accepte" };
-  }
+  await updateAnnonceMerged(annonceId, {
+    diaspora_id: positionnement.diaspora_id,
+  });
+  return { ...positionnement, status: "accepte" };
 }
 
 export async function refusePositionnementAsStudent(
   positionnement: Positionnement,
   annonceId: number,
 ): Promise<Positionnement> {
-  try {
-    return await patchPositionnementStatus(positionnement.id, "refuse");
-  } catch (err) {
-    if (!(err instanceof ApiError) || err.status !== 403) throw err;
+  const current = await apiFetch<Annonce>(`/annonces/${annonceId}`);
+  if (Number(current.diaspora_id) === Number(positionnement.diaspora_id)) {
+    await updateAnnonceMerged(annonceId, { diaspora_id: null });
   }
-
-  await updateAnnonce(annonceId, { diaspora_id: null });
-
-  try {
-    return await apiFetch<Positionnement>(`/positionnements/${positionnement.id}`);
-  } catch {
-    return { ...positionnement, status: "refuse" };
-  }
+  return { ...positionnement, status: "refuse" };
 }
