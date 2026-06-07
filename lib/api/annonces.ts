@@ -1,7 +1,6 @@
 import { apiFetch, ApiError } from "./client";
 import {
-  deletePositionnement,
-  persistPositionnementRefuse,
+  markPositionnementRefusedLocally,
   syncPositionnementWithAnnonce,
 } from "./positionnements";
 import type { Annonce, Positionnement } from "./types";
@@ -86,6 +85,10 @@ export async function acceptPositionnementAsStudent(
   return { annonce: verified, positionnement: positionnementSynced };
 }
 
+/**
+ * Refus côté étudiant : retrait via PUT /annonces (diaspora_id) si retenu,
+ * puis persistance locale du statut refuse (PUT /positionnements → 403 étudiant).
+ */
 export async function refusePositionnementAsStudent(
   positionnement: Positionnement,
   annonceId: number,
@@ -96,35 +99,28 @@ export async function refusePositionnementAsStudent(
     await updateAnnonceMerged(annonceId, { diaspora_id: null });
   }
 
-  let positionnementSynced: Positionnement;
-
-  try {
-    positionnementSynced = await persistPositionnementRefuse(positionnement.id);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 403) {
-      await deletePositionnement(positionnement.id);
-      positionnementSynced = { ...positionnement, status: "refuse" };
-    } else {
-      throw err;
-    }
-  }
+  markPositionnementRefusedLocally({
+    id: positionnement.id,
+    annonceId,
+    diasporaId: positionnement.diaspora_id,
+  });
 
   const verified = await apiFetch<Annonce>(`/annonces/${annonceId}`);
 
-  const refreshed = await apiFetch<Positionnement>(
-    `/positionnements/${positionnement.id}`,
-  ).catch(() => null);
-
-  if (refreshed) {
-    if (refreshed.status === "refuse") {
-      positionnementSynced = refreshed;
-    } else {
-      throw new ApiError(422, {
-        message:
-          "Le refus n’a pas été enregistré sur le serveur. Réessaie ou contacte le support.",
-      });
-    }
+  if (
+    isDiasporaLinked(current, positionnement.diaspora_id) &&
+    isDiasporaLinked(verified, positionnement.diaspora_id)
+  ) {
+    throw new ApiError(422, {
+      message:
+        "Le retrait de l’accompagnant n’a pas été enregistré sur le serveur. Réessaie ou contacte le support.",
+    });
   }
+
+  const positionnementSynced: Positionnement = {
+    ...positionnement,
+    status: "refuse",
+  };
 
   return { annonce: verified, positionnement: positionnementSynced };
 }

@@ -1,3 +1,4 @@
+import { getStoredBackendUser } from "./auth";
 import { apiFetch, ApiError } from "./client";
 import type {
   Annonce,
@@ -5,6 +6,60 @@ import type {
   Positionnement,
   PositionnementStatus,
 } from "./types";
+
+const REFUSED_POSITIONNEMENTS_PREFIX = "360cf-refused-positionnements";
+
+type RefusedPositionnementEntry = {
+  id: number;
+  annonceId: number;
+  diasporaId: number;
+};
+
+function refusedPositionnementsStorageKey(): string {
+  const user = getStoredBackendUser();
+  return user
+    ? `${REFUSED_POSITIONNEMENTS_PREFIX}-${user.id}`
+    : `${REFUSED_POSITIONNEMENTS_PREFIX}-anonymous`;
+}
+
+function readRefusedPositionnements(): RefusedPositionnementEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(refusedPositionnementsStorageKey());
+    if (!raw) return [];
+    return JSON.parse(raw) as RefusedPositionnementEntry[];
+  } catch {
+    return [];
+  }
+}
+
+function writeRefusedPositionnements(entries: RefusedPositionnementEntry[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    refusedPositionnementsStorageKey(),
+    JSON.stringify(entries),
+  );
+}
+
+/** Refus enregistré localement (le backend n’autorise pas PUT /positionnements côté étudiant). */
+export function markPositionnementRefusedLocally(entry: RefusedPositionnementEntry) {
+  const entries = readRefusedPositionnements().filter((e) => e.id !== entry.id);
+  entries.push(entry);
+  writeRefusedPositionnements(entries);
+}
+
+export function applyLocallyRefusedPositionnements(
+  items: Positionnement[],
+): Positionnement[] {
+  const refusedIds = new Set(readRefusedPositionnements().map((e) => e.id));
+  if (refusedIds.size === 0) return items;
+
+  return items.map((p) =>
+    refusedIds.has(p.id) && p.status !== "refuse"
+      ? { ...p, status: "refuse" as const }
+      : p,
+  );
+}
 
 type PositionnementsIndexResponse =
   | Positionnement[]
@@ -119,20 +174,6 @@ export async function updatePositionnementStatus(
   }
 }
 
-/** PUT direct (évite PATCH 403 côté étudiant sur certains backends). */
-export async function persistPositionnementRefuse(
-  id: number,
-): Promise<Positionnement> {
-  return apiFetch<Positionnement>(`/positionnements/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({ status: "refuse" }),
-  });
-}
-
-export async function deletePositionnement(id: number): Promise<void> {
-  await apiFetch(`/positionnements/${id}`, { method: "DELETE" });
-}
-
 /**
  * Le backend lie souvent l’acceptation via annonce.diaspora_id sans mettre à jour
  * positionnement.status — on aligne l’affichage sur la source de vérité annonce.
@@ -144,13 +185,16 @@ export function syncPositionnementsWithAnnonce(
   const linked =
     annonce.diaspora_id != null ? Number(annonce.diaspora_id) : null;
 
-  if (linked === null || Number.isNaN(linked)) return items;
+  const synced =
+    linked === null || Number.isNaN(linked)
+      ? items
+      : items.map((p) => {
+          if (Number(p.diaspora_id) !== linked) return p;
+          if (p.status === "accepte") return p;
+          return { ...p, status: "accepte" as const };
+        });
 
-  return items.map((p) => {
-    if (Number(p.diaspora_id) !== linked) return p;
-    if (p.status === "accepte") return p;
-    return { ...p, status: "accepte" as const };
-  });
+  return applyLocallyRefusedPositionnements(synced);
 }
 
 export function syncPositionnementWithAnnonce(
@@ -168,7 +212,11 @@ export function getAcceptedDiasporaId(
 ): number | null {
   if (annonce.diaspora_id != null) {
     const id = Number(annonce.diaspora_id);
-    if (!Number.isNaN(id)) return id;
+    if (!Number.isNaN(id)) {
+      const linked = positionnements.find((p) => Number(p.diaspora_id) === id);
+      if (linked?.status === "refuse") return null;
+      return id;
+    }
   }
   const accepted = positionnements.find((p) => p.status === "accepte");
   return accepted ? Number(accepted.diaspora_id) : null;

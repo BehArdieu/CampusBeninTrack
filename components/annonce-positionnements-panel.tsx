@@ -37,7 +37,7 @@ function statusBadgeClass(status: PositionnementStatus): string {
 function formatActionError(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 403) {
-      return "Action refusée : seul l’étudiant auteur de cette annonce peut accepter ou refuser. Vérifie que tu es connecté avec le compte qui a publié la demande.";
+      return "Action refusée par le serveur. Vérifie que tu es connecté avec le compte étudiant qui a publié cette annonce.";
     }
     return (err.body.message as string) || "Action impossible.";
   }
