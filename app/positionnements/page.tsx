@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
 import { isDiasporaRole } from "@/lib/api/user";
-import { listPositionnements, POSITIONNEMENT_STATUS_LABELS } from "@/lib/api/positionnements";
+import {
+  listPositionnements,
+  POSITIONNEMENT_STATUS_LABELS,
+  syncPositionnementWithAnnonce,
+} from "@/lib/api/positionnements";
 import type { Positionnement } from "@/lib/api/types";
 
 export default function MesPositionnementsPage() {
@@ -23,7 +27,15 @@ export default function MesPositionnementsPage() {
 
     setLoading(true);
     listPositionnements()
-      .then(setItems)
+      .then((list) =>
+        setItems(
+          list.map((p) =>
+            p.annonce
+              ? syncPositionnementWithAnnonce(p.annonce, p) ?? p
+              : p,
+          ),
+        ),
+      )
       .catch(() => setError("Impossible de charger tes positionnements."))
       .finally(() => setLoading(false));
   }, [ready, backendToken, isDiaspora]);

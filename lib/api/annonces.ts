@@ -1,5 +1,11 @@
-import { apiFetch } from "./client";
+import { apiFetch, ApiError } from "./client";
+import { syncPositionnementWithAnnonce } from "./positionnements";
 import type { Annonce, Positionnement } from "./types";
+
+export type AcceptPositionnementResult = {
+  annonce: Annonce;
+  positionnement: Positionnement;
+};
 
 export async function updateAnnonce(
   annonceId: number,
@@ -27,31 +33,58 @@ async function updateAnnonceMerged(
     titre: current.titre,
     description: current.description,
     universite: current.universite,
+    status: current.status,
     ...patch,
   });
 }
 
+function isDiasporaLinked(annonce: Annonce, diasporaId: number): boolean {
+  return (
+    annonce.diaspora_id != null &&
+    Number(annonce.diaspora_id) === Number(diasporaId)
+  );
+}
+
 /**
  * Acceptation côté étudiant via PUT /annonces/{id} + diaspora_id.
- * Le backend refuse en général PATCH/PUT sur /positionnements pour l’étudiant.
+ * Vérifie la persistance en rechargeant l’annonce après sauvegarde.
  */
 export async function acceptPositionnementAsStudent(
   positionnement: Positionnement,
   annonceId: number,
-): Promise<Positionnement> {
+): Promise<AcceptPositionnementResult> {
   await updateAnnonceMerged(annonceId, {
     diaspora_id: positionnement.diaspora_id,
   });
-  return { ...positionnement, status: "accepte" };
+
+  const verified = await apiFetch<Annonce>(`/annonces/${annonceId}`);
+
+  if (!isDiasporaLinked(verified, positionnement.diaspora_id)) {
+    throw new ApiError(422, {
+      message:
+        "L’acceptation n’a pas été enregistrée sur le serveur. Le champ diaspora_id de l’annonce est toujours vide — vérifiez la configuration backend.",
+    });
+  }
+
+  const positionnementSynced = syncPositionnementWithAnnonce(verified, positionnement)!;
+  return { annonce: verified, positionnement: positionnementSynced };
 }
 
 export async function refusePositionnementAsStudent(
   positionnement: Positionnement,
   annonceId: number,
-): Promise<Positionnement> {
+): Promise<AcceptPositionnementResult> {
   const current = await apiFetch<Annonce>(`/annonces/${annonceId}`);
-  if (Number(current.diaspora_id) === Number(positionnement.diaspora_id)) {
+
+  if (isDiasporaLinked(current, positionnement.diaspora_id)) {
     await updateAnnonceMerged(annonceId, { diaspora_id: null });
   }
-  return { ...positionnement, status: "refuse" };
+
+  const verified = await apiFetch<Annonce>(`/annonces/${annonceId}`);
+  const positionnementSynced: Positionnement = {
+    ...positionnement,
+    status: "refuse",
+  };
+
+  return { annonce: verified, positionnement: positionnementSynced };
 }

@@ -7,13 +7,14 @@ import {
   refusePositionnementAsStudent,
 } from "@/lib/api/annonces";
 import { POSITIONNEMENT_STATUS_LABELS } from "@/lib/api/positionnements";
-import type { Positionnement, PositionnementStatus } from "@/lib/api/types";
+import type { Annonce, Positionnement, PositionnementStatus } from "@/lib/api/types";
 
 type Props = {
   annonceId: number;
   positionnements: Positionnement[];
   canManage?: boolean;
   onUpdate: (updated: Positionnement) => void;
+  onAnnonceChange?: (annonce: Annonce) => void;
 };
 
 function statusBadgeClass(status: PositionnementStatus): string {
@@ -44,6 +45,7 @@ export function AnnoncePositionnementsPanel({
   positionnements,
   canManage = true,
   onUpdate,
+  onAnnonceChange,
 }: Props) {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,11 +58,12 @@ export function AnnoncePositionnementsPanel({
     setBusyId(p.id);
     setError(null);
     try {
-      const updated =
+      const result =
         status === "accepte"
           ? await acceptPositionnementAsStudent(p, annonceId)
           : await refusePositionnementAsStudent(p, annonceId);
-      onUpdate(updated);
+      onUpdate(result.positionnement);
+      onAnnonceChange?.(result.annonce);
     } catch (err) {
       setError(formatActionError(err));
     } finally {

@@ -8,6 +8,8 @@ import { apiFetch } from "@/lib/api/client";
 import {
   getMyPositionnementForAnnonce,
   listPositionnementsForAnnonce,
+  syncPositionnementWithAnnonce,
+  syncPositionnementsWithAnnonce,
 } from "@/lib/api/positionnements";
 import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
 import { PositionnementForm } from "@/components/positionnement-form";
@@ -49,15 +51,15 @@ export default function AnnonceDetailPage() {
         const owner = Number(data.user_id) === Number(user.id);
 
         if (owner) {
-          const list = data.positionnements?.length
+          const raw = data.positionnements?.length
             ? data.positionnements
             : await listPositionnementsForAnnonce(annonceId).catch(() => [] as Positionnement[]);
-          setPositionnements(list);
+          setPositionnements(syncPositionnementsWithAnnonce(data, raw));
           setMyPositionnement(null);
         } else if (isDiasporaRole(user.role)) {
           const mine = await getMyPositionnementForAnnonce(annonceId, user.id);
           if (cancelled) return;
-          setMyPositionnement(mine);
+          setMyPositionnement(syncPositionnementWithAnnonce(data, mine));
           setPositionnements([]);
         } else {
           setPositionnements([]);
@@ -210,6 +212,7 @@ export default function AnnonceDetailPage() {
               positionnements={positionnements}
               canManage={isOwner}
               onUpdate={handlePositionnementUpdated}
+              onAnnonceChange={setAnnonce}
             />
           </div>
         )}
