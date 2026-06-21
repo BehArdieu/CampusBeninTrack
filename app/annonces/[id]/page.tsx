@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api/client";
 import {
   getMyPositionnementForAnnonce,
   listPositionnementsForAnnonce,
+  POSITIONNEMENT_STATUS_LABELS,
   syncPositionnementWithAnnonce,
   syncPositionnementsWithAnnonce,
 } from "@/lib/api/positionnements";
@@ -170,11 +171,27 @@ export default function AnnonceDetailPage() {
 
   const showDiasporaForm = !isOwner && (isDiaspora || !isEtudiant);
   const showStudentPanel = isOwner;
+  const syncedPositionnement =
+    annonce && myPositionnement
+      ? syncPositionnementWithAnnonce(annonce, myPositionnement)
+      : myPositionnement;
   const diasporaAccepted =
     isDiaspora &&
     backendUser &&
     annonce &&
-    isDiasporaAcceptedForAnnonce(annonce, backendUser.id, myPositionnement);
+    isDiasporaAcceptedForAnnonce(annonce, backendUser.id, syncedPositionnement);
+  const diasporaStatusBadge =
+    isDiaspora && syncedPositionnement
+      ? {
+          label: POSITIONNEMENT_STATUS_LABELS[syncedPositionnement.status],
+          className:
+            syncedPositionnement.status === "accepte"
+              ? "bg-green-100 text-green-800"
+              : syncedPositionnement.status === "refuse"
+                ? "bg-red-100 text-red-700"
+                : "bg-[var(--accent-soft)] text-[var(--accent)]",
+        }
+      : null;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
@@ -189,9 +206,17 @@ export default function AnnonceDetailPage() {
       <article className="mt-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <h1 className="font-display text-3xl font-bold text-[var(--ink)]">{annonce.titre}</h1>
-          <span className="shrink-0 rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-medium text-[var(--accent)]">
-            {annonce.status ?? "active"}
-          </span>
+          {diasporaStatusBadge ? (
+            <span
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${diasporaStatusBadge.className}`}
+            >
+              {diasporaStatusBadge.label}
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-medium text-[var(--accent)]">
+              {annonce.status ?? "active"}
+            </span>
+          )}
         </div>
 
         <div className="mt-4 flex flex-wrap gap-3 text-sm text-[var(--muted)]">
@@ -274,7 +299,7 @@ export default function AnnonceDetailPage() {
               annonceId={annonce.id}
               annonce={annonce}
               diasporaUserId={backendUser?.id}
-              existing={myPositionnement}
+              existing={syncedPositionnement}
               onSuccess={handlePositionnementCreated}
             />
           </div>
