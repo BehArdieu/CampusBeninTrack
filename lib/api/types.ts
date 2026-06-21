@@ -48,6 +48,7 @@ export interface Annonce {
   positionnements_count?: number;
   reponses_count?: number;
   positionnements?: Positionnement[];
+  reponses?: Reponse[];
 }
 
 export type PositionnementStatus = "en_attente" | "lu" | "accepte" | "refuse";
@@ -93,4 +94,5 @@ export interface Reponse {
   created_at: string;
   updated_at: string;
   images?: { id: number; url: string }[];
+  diaspora?: UserProfileEmbed;
 }
