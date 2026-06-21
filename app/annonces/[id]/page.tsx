@@ -11,10 +11,16 @@ import {
   syncPositionnementWithAnnonce,
   syncPositionnementsWithAnnonce,
 } from "@/lib/api/positionnements";
+import {
+  isDiasporaAcceptedForAnnonce,
+  listReponsesForAnnonce,
+} from "@/lib/api/reponses";
 import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
 import { PositionnementForm } from "@/components/positionnement-form";
 import { AnnoncePositionnementsPanel } from "@/components/annonce-positionnements-panel";
-import type { Annonce, Positionnement } from "@/lib/api/types";
+import { AnnonceReponsesPanel } from "@/components/annonce-reponses-panel";
+import { ReponseForm, ReponseListSummary } from "@/components/reponse-form";
+import type { Annonce, Positionnement, Reponse } from "@/lib/api/types";
 
 export default function AnnonceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +28,7 @@ export default function AnnonceDetailPage() {
   const [annonce, setAnnonce] = useState<Annonce | null>(null);
   const [positionnements, setPositionnements] = useState<Positionnement[]>([]);
   const [myPositionnement, setMyPositionnement] = useState<Positionnement | null>(null);
+  const [reponses, setReponses] = useState<Reponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,20 +57,30 @@ export default function AnnonceDetailPage() {
         setAnnonce(data);
         const owner = Number(data.user_id) === Number(user.id);
 
+        const rawReponses =
+          data.reponses?.length
+            ? data.reponses
+            : await listReponsesForAnnonce(annonceId).catch(() => [] as Reponse[]);
+
         if (owner) {
           const raw = data.positionnements?.length
             ? data.positionnements
             : await listPositionnementsForAnnonce(annonceId).catch(() => [] as Positionnement[]);
           setPositionnements(syncPositionnementsWithAnnonce(data, raw));
           setMyPositionnement(null);
+          setReponses(rawReponses);
         } else if (isDiasporaRole(user.role)) {
           const mine = await getMyPositionnementForAnnonce(annonceId, user.id, data);
           if (cancelled) return;
           setMyPositionnement(mine);
           setPositionnements([]);
+          setReponses(
+            rawReponses.filter((r) => Number(r.diaspora_id) === Number(user.id)),
+          );
         } else {
           setPositionnements([]);
           setMyPositionnement(null);
+          setReponses([]);
         }
 
         setError(null);
@@ -94,6 +111,18 @@ export default function AnnonceDetailPage() {
     setPositionnements((prev) =>
       prev.map((p) => (p.id === updated.id ? updated : p)),
     );
+    setMyPositionnement((prev) => (prev?.id === updated.id ? updated : prev));
+  }
+
+  function handleReponseCreated(r: Reponse) {
+    setReponses((prev) => {
+      if (prev.some((x) => x.id === r.id)) return prev;
+      return [r, ...prev];
+    });
+  }
+
+  function handleReponseUpdated(updated: Reponse) {
+    setReponses((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
   }
 
   if (!ready || loading) {
@@ -141,6 +170,11 @@ export default function AnnonceDetailPage() {
 
   const showDiasporaForm = !isOwner && (isDiaspora || !isEtudiant);
   const showStudentPanel = isOwner;
+  const diasporaAccepted =
+    isDiaspora &&
+    backendUser &&
+    annonce &&
+    isDiasporaAcceptedForAnnonce(annonce, backendUser.id, myPositionnement);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
@@ -185,6 +219,12 @@ export default function AnnonceDetailPage() {
               {(annonce.positionnements_count ?? positionnements.length) > 1 ? "s" : ""}
             </span>
           )}
+          {(annonce.reponses_count ?? reponses.length) > 0 && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--forest)]/10 px-3 py-1 text-[var(--forest)]">
+              🏠 {annonce.reponses_count ?? reponses.length} proposition
+              {(annonce.reponses_count ?? reponses.length) > 1 ? "s" : ""} de logement
+            </span>
+          )}
         </div>
 
         {annonce.user && !isOwner && (
@@ -218,6 +258,16 @@ export default function AnnonceDetailPage() {
           </div>
         )}
 
+        {showStudentPanel && (
+          <div className="mt-10">
+            <AnnonceReponsesPanel
+              reponses={reponses}
+              canManage={isOwner}
+              onUpdate={handleReponseUpdated}
+            />
+          </div>
+        )}
+
         {showDiasporaForm && (
           <div className="mt-10">
             <PositionnementForm
@@ -227,6 +277,13 @@ export default function AnnonceDetailPage() {
               existing={myPositionnement}
               onSuccess={handlePositionnementCreated}
             />
+          </div>
+        )}
+
+        {diasporaAccepted && (
+          <div className="mt-8 space-y-8">
+            <ReponseForm annonceId={annonce.id} onSuccess={handleReponseCreated} />
+            <ReponseListSummary items={reponses} />
           </div>
         )}
 
