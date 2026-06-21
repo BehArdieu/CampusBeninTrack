@@ -1,4 +1,5 @@
 import { apiFetch, ApiError } from "./client";
+import { resolvePositionnementStatus } from "./positionnements";
 import type { Annonce, PaginatedResponse, Positionnement, Reponse } from "./types";
 
 export type ReponseStatus = Reponse["status"];
@@ -86,7 +87,10 @@ export function isDiasporaAcceptedForAnnonce(
   ) {
     return true;
   }
-  return positionnement?.status === "accepte";
+  if (positionnement) {
+    return resolvePositionnementStatus(annonce, positionnement).status === "accepte";
+  }
+  return false;
 }
 
 export function formatReponsePrix(prix: number): string {
