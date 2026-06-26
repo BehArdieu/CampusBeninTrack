@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AuthButton } from "./auth-button";
+import { ThemeToggle } from "./theme-toggle";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
 import { isDiasporaRole } from "@/lib/api/user";
 
@@ -42,6 +43,7 @@ export function SiteHeader() {
               </Link>
             ))}
           </nav>
+          <ThemeToggle />
           <AuthButton />
         </div>
       </div>
