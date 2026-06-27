@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
-import { isDiasporaRole } from "@/lib/api/user";
 import {
   enrichPositionnementsWithAnnonces,
   listPositionnements,
@@ -32,10 +31,8 @@ export default function MesPositionnementsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const isDiaspora = isDiasporaRole(backendUser?.role);
-
   useEffect(() => {
-    if (!ready || !backendToken || !isDiaspora) {
+    if (!ready || !backendToken) {
       setLoading(false);
       return;
     }
@@ -48,7 +45,7 @@ export default function MesPositionnementsPage() {
       .then(setItems)
       .catch(() => setError("Impossible de charger tes positionnements."))
       .finally(() => setLoading(false));
-  }, [ready, backendToken, isDiaspora, backendUser?.id]);
+  }, [ready, backendToken, backendUser?.id]);
 
   if (!ready || loading) {
     return (
@@ -68,20 +65,6 @@ export default function MesPositionnementsPage() {
         <h1 className="font-display text-2xl font-bold">Connexion requise</h1>
         <Link href="/connexion" className="mt-6 rounded-full bg-[var(--forest)] px-6 py-3 text-sm font-semibold text-[var(--card)]">
           Se connecter
-        </Link>
-      </main>
-    );
-  }
-
-  if (!isDiaspora) {
-    return (
-      <main className="mx-auto max-w-lg px-4 py-12 text-center sm:px-6">
-        <h1 className="font-display text-2xl font-bold text-[var(--ink)]">Réservé à la diaspora</h1>
-        <p className="mt-3 text-[var(--muted)]">
-          Cette page liste les annonces sur lesquelles tu t’es positionné en tant qu’aidant.
-        </p>
-        <Link href="/annonces" className="mt-6 inline-block text-[var(--accent)] underline">
-          Voir les annonces
         </Link>
       </main>
     );
