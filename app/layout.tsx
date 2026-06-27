@@ -37,7 +37,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${libre.variable} ${dmSans.variable} h-full`}>
+    <html lang="fr" className={`${libre.variable} ${dmSans.variable} h-full`} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("360cf-theme");if(t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className={`${dmSans.className} min-h-full flex flex-col antialiased`}>
         <BackendAuthProvider>
           <SiteHeader />
