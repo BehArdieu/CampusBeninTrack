@@ -7,6 +7,7 @@ import {
   REPONSE_STATUS_LABELS,
   updateReponseStatus,
 } from "@/lib/api/reponses";
+import { ImageGallery } from "@/components/image-gallery";
 import type { Reponse } from "@/lib/api/types";
 
 type Props = {
@@ -124,24 +125,7 @@ export function AnnonceReponsesPanel({
               </div>
 
               {r.images && r.images.length > 0 ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {r.images.map((img) => (
-                    <a
-                      key={img.id}
-                      href={img.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block overflow-hidden rounded-lg border border-[var(--border)]"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img.url}
-                        alt="Photo du logement"
-                        className="h-24 w-32 object-cover"
-                      />
-                    </a>
-                  ))}
-                </div>
+                <ImageGallery images={r.images} />
               ) : null}
 
               {pending && canManage ? (
