@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ApiError } from "@/lib/api/client";
 import { createReponse, formatReponsePrix } from "@/lib/api/reponses";
+import { ImageGallery } from "@/components/image-gallery";
 import type { Reponse } from "@/lib/api/types";
 
 type Props = {
@@ -147,6 +148,9 @@ export function ReponseListSummary({
               <p className="mt-1 text-[var(--muted)]">
                 {r.diaspora.prenom} {r.diaspora.nom}
               </p>
+            ) : null}
+            {r.images && r.images.length > 0 ? (
+              <ImageGallery images={r.images} />
             ) : null}
           </li>
         ))}
