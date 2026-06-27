@@ -16,7 +16,7 @@ import {
   isDiasporaAcceptedForAnnonce,
   listReponsesForAnnonce,
 } from "@/lib/api/reponses";
-import { isDiasporaRole, isEtudiantRole } from "@/lib/api/user";
+import { isEtudiantRole } from "@/lib/api/user";
 import { PositionnementForm } from "@/components/positionnement-form";
 import { AnnoncePositionnementsPanel } from "@/components/annonce-positionnements-panel";
 import { AnnonceReponsesPanel } from "@/components/annonce-reponses-panel";
@@ -38,7 +38,6 @@ export default function AnnonceDetailPage() {
     annonce && backendUser
       ? Number(annonce.user_id) === Number(backendUser.id)
       : false;
-  const isDiaspora = isDiasporaRole(backendUser?.role);
   const isEtudiant = isEtudiantRole(backendUser?.role);
 
   useEffect(() => {
@@ -70,7 +69,7 @@ export default function AnnonceDetailPage() {
           setPositionnements(syncPositionnementsWithAnnonce(data, raw));
           setMyPositionnement(null);
           setReponses(rawReponses);
-        } else if (isDiasporaRole(user.role)) {
+        } else {
           const mine = await getMyPositionnementForAnnonce(annonceId, user.id, data);
           if (cancelled) return;
           setMyPositionnement(mine);
@@ -78,10 +77,6 @@ export default function AnnonceDetailPage() {
           setReponses(
             rawReponses.filter((r) => Number(r.diaspora_id) === Number(user.id)),
           );
-        } else {
-          setPositionnements([]);
-          setMyPositionnement(null);
-          setReponses([]);
         }
 
         setError(null);
@@ -169,19 +164,19 @@ export default function AnnonceDetailPage() {
 
   if (!annonce) return null;
 
-  const showDiasporaForm = !isOwner && (isDiaspora || !isEtudiant);
+  const showDiasporaForm = !isOwner;
   const showStudentPanel = isOwner;
   const syncedPositionnement =
     annonce && myPositionnement
       ? syncPositionnementWithAnnonce(annonce, myPositionnement)
       : myPositionnement;
   const diasporaAccepted =
-    isDiaspora &&
+    !isOwner &&
     backendUser &&
     annonce &&
     isDiasporaAcceptedForAnnonce(annonce, backendUser.id, syncedPositionnement);
   const diasporaStatusBadge =
-    isDiaspora && syncedPositionnement
+    !isOwner && syncedPositionnement
       ? {
           label: POSITIONNEMENT_STATUS_LABELS[syncedPositionnement.status],
           className:
@@ -326,7 +321,7 @@ export default function AnnonceDetailPage() {
           >
             ← Retour aux annonces
           </Link>
-          {isDiaspora && (
+          {!isOwner && (
             <Link
               href="/positionnements"
               className="inline-flex rounded-full border border-[var(--forest)] px-5 py-2 text-sm font-medium text-[var(--forest)] transition hover:bg-[var(--forest)] hover:text-[var(--card)]"

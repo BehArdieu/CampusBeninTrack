@@ -4,7 +4,6 @@ import Link from "next/link";
 import { AuthButton } from "./auth-button";
 import { ThemeToggle } from "./theme-toggle";
 import { useBackendAuth } from "@/hooks/use-backend-auth";
-import { isDiasporaRole } from "@/lib/api/user";
 
 const baseLinks = [
   { href: "/annonces", label: "Logement" },
@@ -14,14 +13,13 @@ const baseLinks = [
 
 export function SiteHeader() {
   const { backendUser, backendToken } = useBackendAuth();
-  const links =
-    backendToken && isDiasporaRole(backendUser?.role)
-      ? [
-          ...baseLinks.slice(0, 1),
-          { href: "/positionnements", label: "Mes positionnements" },
-          ...baseLinks.slice(1),
-        ]
-      : baseLinks;
+  const links = backendToken
+    ? [
+        ...baseLinks.slice(0, 1),
+        { href: "/positionnements", label: "Mes positionnements" },
+        ...baseLinks.slice(1),
+      ]
+    : baseLinks;
 
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-md">
